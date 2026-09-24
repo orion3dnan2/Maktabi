@@ -12,3 +12,4 @@ coverage/
 !.env.example
 android/
 ios/
+dist-android/
