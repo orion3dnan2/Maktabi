@@ -4,11 +4,11 @@ export type UserRole = 'OWNER' | 'LAWYER' | 'ASSISTANT' | 'ACCOUNTANT' | 'VIEWER
 
 export interface Office { id: EntityId; name: string; legalName?: string; phone?: string; address?: string; defaultCurrency: CurrencyCode; }
 export interface User { id: EntityId; officeId: EntityId; fullName: string; role: UserRole; email?: string; isActive: boolean; }
-export interface Client { id: EntityId; officeId: EntityId; displayName: string; kind: 'PERSON' | 'ORGANIZATION'; phone: string; email?: string; nationalId?: string; createdAt: ISODateTime; }
+export interface Client { id: EntityId; officeId: EntityId; displayName: string; kind: 'PERSON' | 'ORGANIZATION'; phone: string; whatsapp?: string; contactPerson?: string; registration?: string; address?: string; notes?: string; email?: string; nationalId?: string; createdAt: ISODateTime; }
 
 export type MatterType = 'CRIMINAL' | 'CIVIL' | 'PERSONAL_STATUS' | 'LABOUR' | 'SPECIAL_COURT' | 'COMMERCIAL_REGISTRY' | 'LAND_REGISTRY' | 'NOTARIZATION' | 'OTHER';
 export type MatterStatus = 'ACTIVE' | 'ON_HOLD' | 'CLOSED' | 'ARCHIVED';
-export interface Matter { id: EntityId; officeId: EntityId; reference: string; title: string; type: MatterType; primaryClientId: EntityId; authority?: string; status: MatterStatus; workflowId?: EntityId; openedAt: ISODate; nextEventAt?: ISODateTime; }
+export interface Matter { id: EntityId; officeId: EntityId; reference: string; title: string; type: MatterType; parties: MatterParty[]; authority?: string; status: MatterStatus; workflowId?: EntityId; openedAt: ISODate; nextEventAt?: ISODateTime; currentStage?: string; notes?: string; details: Record<string, string>; }
 export interface MatterParty { id: EntityId; matterId: EntityId; clientId?: EntityId; displayName: string; role: 'CLIENT' | 'OPPONENT' | 'WITNESS' | 'OTHER'; isPrimary: boolean; }
 
 export interface Workflow { id: EntityId; matterId: EntityId; name: string; currentStageId: EntityId; stages: WorkflowStage[]; }
@@ -29,7 +29,7 @@ export interface DashboardSnapshot { currentUser: User; office: Office; todaysSe
 
 export interface Repository<T> { getById(id: EntityId): Promise<T | null>; }
 export interface ClientRepository extends Repository<Client> { listByOffice(officeId: EntityId): Promise<Client[]>; save(client: Client): Promise<void>; }
-export interface MatterRepository extends Repository<Matter> { listByClient(clientId: EntityId): Promise<Matter[]>; listActive(officeId: EntityId): Promise<Matter[]>; save(matter: Matter): Promise<void>; }
+export interface MatterRepository extends Repository<Matter> { listByOffice(officeId: EntityId): Promise<Matter[]>; listByClient(clientId: EntityId): Promise<Matter[]>; listActive(officeId: EntityId): Promise<Matter[]>; save(matter: Matter): Promise<void>; }
 export interface SessionRepository extends Repository<Session> { listForDate(officeId: EntityId, date: ISODate): Promise<Session[]>; }
 export interface DocumentRepository extends Repository<LegalDocument> { listByMatter(matterId: EntityId): Promise<LegalDocument[]>; save(document: LegalDocument): Promise<void>; }
 export interface FinanceRepository { listFeePayments(matterId: EntityId): Promise<Payment[]>; listExpenses(matterId: EntityId): Promise<Expense[]>; listTrustEntries(clientId: EntityId): Promise<ClientTrust[]>; }
@@ -41,3 +41,5 @@ export function cancelReceipt(receipt: Receipt, cancelledAt: ISODateTime, reason
   if (!reason.trim()) throw new Error('CANCELLATION_REASON_REQUIRED');
   return { ...receipt, status: 'CANCELLED', cancelledAt, cancellationReason: reason };
 }
+
+export * from './clientsMatters';

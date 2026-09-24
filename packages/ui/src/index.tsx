@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, elevation, fonts, gradients, iconSize, layout, radius, rtl, spacing, tones, type, type Tone } from './theme';
 export * from './theme';
+export * from './forms';
 
 export type IconName = ComponentProps<typeof Ionicons>['name'];
 

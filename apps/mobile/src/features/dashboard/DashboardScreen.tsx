@@ -16,8 +16,8 @@ const activityIcon: Record<DashboardActivity['kind'], { icon: IconName; tone: To
   MATTER: { icon: 'folder-open-outline', tone: 'gold' }, CLIENT: { icon: 'person-add-outline', tone: 'info' },
   DOCUMENT: { icon: 'document-text-outline', tone: 'neutral' }, PAYMENT: { icon: 'cash-outline', tone: 'success' },
 };
-const quickActions: { icon: IconName; label: string }[] = [
-  { icon: 'folder-open-outline', label: 'ملف جديد' }, { icon: 'person-add-outline', label: 'عميل جديد' },
+const quickActions: { icon: IconName; label: string; href?: '/matters/new' | '/clients/new' }[] = [
+  { icon: 'folder-open-outline', label: 'ملف جديد', href: '/matters/new' }, { icon: 'person-add-outline', label: 'عميل جديد', href: '/clients/new' },
   { icon: 'camera-outline', label: 'تصوير مستند' }, { icon: 'cash-outline', label: 'تسجيل دفعة' },
 ];
 
@@ -72,7 +72,7 @@ export default function DashboardScreen() {
 
     <Card>
       <SectionHeader icon="flash-outline" title="إجراءات سريعة"/>
-      <View style={styles.quickRow}>{quickActions.map((action) => <QuickAction key={action.label} {...action} onPress={() => comingSoon(action.label)}/>)}</View>
+      <View style={styles.quickRow}>{quickActions.map(({ href, ...action }) => <QuickAction key={action.label} {...action} onPress={() => href ? router.push(href) : comingSoon(action.label)}/>)}</View>
     </Card>
 
     <Card>
