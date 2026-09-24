@@ -1,0 +1,16 @@
+{
+  "name": "maktabi",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "npm@10.8.2",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "npm run dev --workspace=@maktabi/app",
+    "build": "npm run build --workspace=@maktabi/app",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "preview": "npm run preview --workspace=@maktabi/app"
+  },
+  "engines": { "node": ">=20" }
+}
