@@ -1,30 +1,92 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import type { DashboardSnapshot } from '@maktabi/domain';
-import { Badge, Card, colors, ErrorState, layout, LoadingState, SearchInput, SectionHeader, spacing, typography } from '@maktabi/ui';
-import { AppHeader } from '@/components/AppHeader';
+import { useCallback, useEffect, useState } from 'react';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { Alert, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import type { DashboardActivity, DashboardSnapshot, Session } from '@maktabi/domain';
+import { AlertRow, Card, colors, ErrorState, HeroScreen, type IconName, LoadingState, MetricCard, QuickAction, rtl, SectionHeader, spacing, TimelineRow, type Tone, type } from '@maktabi/ui';
+import { NotificationsButton } from '@/components/NotificationsButton';
 import { dashboardRepository } from '@/data/mockDashboardRepository';
-const time = new Intl.DateTimeFormat('ar-SD', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' });
-const number = new Intl.NumberFormat('ar-SD', { maximumFractionDigits: 0 });
+import { countLabel, currencyLabel, formatCompact, formatDayMonth, formatInteger, formatTime, relativeDay, relativePast, units } from '@/lib/format';
+
+const sessionStatus: Record<Session['status'], { label: string; tone: Tone }> = {
+  SCHEDULED: { label: 'مجدولة', tone: 'gold' }, COMPLETED: { label: 'منعقدة', tone: 'success' },
+  ADJOURNED: { label: 'مؤجلة', tone: 'warning' }, CANCELLED: { label: 'ملغاة', tone: 'danger' },
+};
+const activityIcon: Record<DashboardActivity['kind'], { icon: IconName; tone: Tone }> = {
+  MATTER: { icon: 'folder-open-outline', tone: 'gold' }, CLIENT: { icon: 'person-add-outline', tone: 'info' },
+  DOCUMENT: { icon: 'document-text-outline', tone: 'neutral' }, PAYMENT: { icon: 'cash-outline', tone: 'success' },
+};
+const quickActions: { icon: IconName; label: string }[] = [
+  { icon: 'folder-open-outline', label: 'ملف جديد' }, { icon: 'person-add-outline', label: 'عميل جديد' },
+  { icon: 'camera-outline', label: 'تصوير مستند' }, { icon: 'cash-outline', label: 'تسجيل دفعة' },
+];
+
 export default function DashboardScreen() {
-  const [data, setData] = useState<DashboardSnapshot>(); const [error, setError] = useState(''); const [query, setQuery] = useState(''); const [refreshing, setRefreshing] = useState(false);
-  const load = useCallback(async () => { try { setError(''); setData(await dashboardRepository.getSnapshot()); } catch { setError('تحقق من البيانات المحلية وحاول مرة أخرى.'); } finally { setRefreshing(false); } }, []);
+  const [data, setData] = useState<DashboardSnapshot>(); const [error, setError] = useState(''); const [refreshing, setRefreshing] = useState(false);
+  const load = useCallback(async () => {
+    try { setError(''); setData(await dashboardRepository.getSnapshot()); }
+    catch { setError('تحقق من البيانات المحلية وحاول مرة أخرى.'); }
+    finally { setRefreshing(false); }
+  }, []);
   useEffect(() => { void load(); }, [load]);
-  const activity = useMemo(() => data?.recentActivity.filter((item) => `${item.title} ${item.detail}`.includes(query.trim())) ?? [], [data, query]);
-  if (error) return <View style={styles.flex}><AppHeader/><ErrorState message={error} onRetry={() => void load()}/></View>;
-  if (!data) return <View style={styles.flex}><AppHeader/><LoadingState/></View>;
-  const firstName = data.currentUser.fullName.split(' ')[0] ?? data.currentUser.fullName;
-  return <View style={styles.flex}><AppHeader/><ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }} tintColor={colors.gold600}/>}>
-    <View style={styles.welcome}><Text style={styles.greeting}>صباح الخير، {firstName}</Text><Text style={styles.office}>{data.office.name}</Text></View>
-    <SearchInput value={query} onChangeText={setQuery} placeholder="ابحث في الملفات والعملاء والمستندات" returnKeyType="search"/>
-    <Card><SectionHeader title="جلسات اليوم" action={`${data.todaysSessions.length} جلسات`}/>{data.todaysSessions.map((session) => <Pressable key={session.id} style={styles.listRow}><Text style={styles.chevron}>‹</Text><View style={styles.rowText}><Text numberOfLines={1} style={styles.itemTitle}>{session.title}</Text><Text numberOfLines={1} style={styles.itemMeta}>{session.authority}{session.room ? ` · ${session.room}` : ''}</Text></View><Text style={styles.time}>{time.format(new Date(session.startsAt))}</Text></Pressable>)}</Card>
-    <Card><SectionHeader title="المواعيد المهمة" action="عرض الكل"/>{data.upcomingDeadlines.map((deadline, index) => <View key={deadline.id} style={styles.listRow}>{deadline.priority === 'URGENT' ? <Badge label="عاجل" tone="danger"/> : <Badge label="قريب" tone="gold"/>}<View style={styles.rowText}><Text numberOfLines={2} style={styles.itemTitle}>{deadline.title}</Text><Text style={styles.itemMeta}>موعد أدخله المستخدم · {index ? '٣٠ سبتمبر' : '٢٧ سبتمبر'}</Text></View></View>)}</Card>
-    <View style={styles.metrics}><Card style={styles.metric}><View style={styles.metricIcon}><Ionicons name="folder-open-outline" size={22} color={colors.white}/></View><Text style={styles.metricLabel}>الملفات النشطة</Text><Text style={styles.metricValue}>{number.format(data.activeMatters)}</Text></Card><Card style={styles.metric}><View style={[styles.metricIcon, styles.metricIconGold]}><Ionicons name="cash-outline" size={22} color={colors.navy950}/></View><Text style={styles.metricLabel}>الأتعاب المستحقة</Text><Text numberOfLines={1} adjustsFontSizeToFit style={styles.metricValue}>{number.format(data.outstandingFees.amountMinor / 100)} ج.س</Text><Text style={styles.warning}>{data.overdueFeeItems} عناصر تحتاج متابعة</Text></Card></View>
-    <Card><SectionHeader title="إجراءات سريعة"/><View style={styles.quickGrid}>{[['folder-open-outline','ملف جديد'],['person-add-outline','عميل جديد'],['camera-outline','تصوير مستند'],['cash-outline','تسجيل دفعة']].map(([icon,label]) => <Pressable key={label} accessibilityRole="button" onPress={() => Alert.alert(label!, 'ستتوفر هذه الوظيفة في دفعة لاحقة.')} style={styles.quick}><View style={styles.quickIcon}><Ionicons name={icon as never} size={23} color={colors.gold600}/></View><Text style={styles.quickLabel}>{label}</Text></Pressable>)}</View></Card>
-    <Card><SectionHeader title="آخر النشاطات" action="عرض السجل"/>{activity.length ? activity.map((item) => <View key={item.id} style={styles.activity}><View style={styles.activityDot}/><View style={styles.rowText}><Text style={styles.itemTitle}>{item.title}</Text><Text style={styles.itemMeta}>{item.detail}</Text></View><Text style={styles.when}>حديثاً</Text></View>) : <Text style={styles.empty}>لا توجد نتائج مطابقة لبحثك</Text>}</Card>
-    <Text style={styles.disclaimer}>جميع الأسماء والمواعيد المعروضة بيانات تجريبية غير قانونية أو ملزمة.</Text>
-  </ScrollView></View>;
+
+  const firstName = data?.currentUser.fullName.split(' ')[0] ?? '';
+  const hero = { title: data ? `مرحباً أستاذ ${firstName}` : 'مكتبي', subtitle: data ? `${data.office.name} · نظرة سريعة على أعمال اليوم` : undefined, action: <NotificationsButton unread={!!data?.upcomingDeadlines.length}/> };
+  const refresh = <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }} tintColor={colors.gold500}/>;
+
+  if (error) return <HeroScreen hero={hero}><ErrorState message={error} onRetry={() => void load()}/></HeroScreen>;
+  if (!data) return <HeroScreen hero={hero}><Card><LoadingState/></Card></HeroScreen>;
+
+  const now = new Date();
+  const sessions = [...data.todaysSessions].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  const deadlines = [...data.upcomingDeadlines].sort((a, b) => a.dueAt.localeCompare(b.dueAt));
+  const fees = formatCompact(data.outstandingFees.amountMinor / 100);
+  const comingSoon = (label: string) => Alert.alert(label, 'ستتوفر هذه الوظيفة في دفعة لاحقة.');
+
+  return <HeroScreen hero={hero} refreshControl={refresh}>
+    <View style={styles.metricRow}>
+      <MetricCard variant="dark" icon="calendar-outline" label="جلسات اليوم" value={formatInteger(sessions.length)} caption={sessions.length ? `أولها ${formatTime(sessions[0]!.startsAt)}` : 'لا جلسات اليوم'} onPress={() => router.navigate('/calendar')}/>
+      <MetricCard icon="folder-open-outline" label="الملفات النشطة" value={formatInteger(data.activeMatters)} caption="ملف نشط حالياً" onPress={() => router.navigate('/matters')}/>
+    </View>
+    <View style={styles.metricRow}>
+      <MetricCard icon="alarm-outline" label="المواعيد القريبة" value={formatInteger(deadlines.length)} caption={deadlines.length ? `أقربها ${relativeDay(deadlines[0]!.dueAt, now)}` : 'لا مواعيد مفتوحة'}/>
+      <MetricCard variant="dark" icon="cash-outline" label="الأتعاب المستحقة" value={fees.value} unit={[fees.scale, currencyLabel(data.outstandingFees.currency)].filter(Boolean).join(' ')} caption={`${countLabel(data.overdueFeeItems, units.item)} متأخرة`}/>
+    </View>
+
+    <Card>
+      <SectionHeader icon="calendar-clear-outline" title="جدول اليوم" action="عرض الكل" onAction={() => router.navigate('/calendar')}/>
+      {sessions.length ? <View>{sessions.map((session, i) => <TimelineRow key={session.id} first={i === 0} last={i === sessions.length - 1}
+        badge={sessionStatus[session.status]} dot={sessionStatus[session.status].tone} icon={<MaterialCommunityIcons name="bank-outline" size={20} color={colors.navy900}/>}
+        title={session.title} meta={[session.authority, session.room].filter(Boolean).join(' · ')} time={formatTime(session.startsAt)}/>)}</View>
+        : <Text style={[type.body, styles.empty]}>لا توجد جلسات مجدولة اليوم</Text>}
+    </Card>
+
+    <Card>
+      <SectionHeader icon="notifications" title="تنبيهات مهمة"/>
+      {deadlines.map((deadline, i) => <AlertRow key={deadline.id} first={i === 0}
+        icon={deadline.priority === 'URGENT' ? 'alert-circle-outline' : 'time-outline'} tone={deadline.priority === 'URGENT' ? 'danger' : 'gold'}
+        title={deadline.title} detail={`${deadline.source === 'USER_ENTERED' ? 'موعد أدخله المستخدم' : 'موعد من قاعدة مهيأة'} · ${formatDayMonth(deadline.dueAt)}`} when={relativeDay(deadline.dueAt, now)}/>)}
+      {data.overdueFeeItems ? <AlertRow first={!deadlines.length} icon="cash-outline" tone="warning" title="أتعاب تحتاج متابعة" detail={`${countLabel(data.overdueFeeItems, units.item)} من الأتعاب المستحقة متأخرة`}/> : null}
+      {!deadlines.length && !data.overdueFeeItems ? <Text style={[type.body, styles.empty]}>لا توجد تنبيهات</Text> : null}
+    </Card>
+
+    <Card>
+      <SectionHeader icon="flash-outline" title="إجراءات سريعة"/>
+      <View style={styles.quickRow}>{quickActions.map((action) => <QuickAction key={action.label} {...action} onPress={() => comingSoon(action.label)}/>)}</View>
+    </Card>
+
+    <Card>
+      <SectionHeader icon="time-outline" title="آخر النشاطات"/>
+      {data.recentActivity.map((item, i) => <AlertRow key={item.id} first={i === 0} {...activityIcon[item.kind]} title={item.title} detail={item.detail} when={relativePast(item.happenedAt, now)}/>)}
+    </Card>
+
+    <Text style={[type.caption, styles.disclaimer]}>جميع الأسماء والمواعيد المعروضة بيانات تجريبية غير قانونية أو ملزمة.</Text>
+  </HeroScreen>;
 }
-const rtl = { textAlign: 'right' as const, writingDirection: 'rtl' as const };
-const styles = StyleSheet.create({ flex: { flex: 1, backgroundColor: colors.canvas }, content: { width: '100%', maxWidth: layout.maxContentWidth, alignSelf: 'center', padding: layout.screenGutter, paddingBottom: spacing.xxl, gap: spacing.md }, welcome: { gap: 2 }, greeting: { ...rtl, color: colors.gold600, fontFamily: typography.medium, fontSize: 13 }, office: { ...rtl, color: colors.navy950, fontFamily: typography.medium, fontSize: 21 }, listRow: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: spacing.sm }, rowText: { flex: 1, gap: 3 }, itemTitle: { ...rtl, color: colors.ink, fontFamily: typography.medium, fontSize: 13 }, itemMeta: { ...rtl, color: colors.muted, fontSize: 10, lineHeight: 17 }, time: { width: 69, ...rtl, color: colors.navy800, fontFamily: typography.medium, fontSize: 12 }, chevron: { color: colors.muted, fontSize: 24 }, metrics: { flexDirection: 'row-reverse', gap: spacing.sm }, metric: { flex: 1, minWidth: 0 }, metricIcon: { width: 42, height: 42, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.navy800 }, metricIconGold: { backgroundColor: colors.gold500 }, metricLabel: { ...rtl, color: colors.muted, fontSize: 10 }, metricValue: { ...rtl, color: colors.navy950, fontFamily: typography.medium, fontSize: 18 }, warning: { ...rtl, color: colors.danger, fontSize: 9 }, quickGrid: { flexDirection: 'row-reverse', justifyContent: 'space-between', gap: spacing.xs }, quick: { minHeight: 76, flex: 1, alignItems: 'center', gap: spacing.xs }, quickIcon: { width: 45, height: 45, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: colors.gold100 }, quickLabel: { ...rtl, color: colors.ink, textAlign: 'center', fontFamily: typography.medium, fontSize: 10 }, activity: { minHeight: 58, flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: spacing.sm }, activityDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.gold500 }, when: { color: colors.muted, fontSize: 9 }, empty: { ...rtl, color: colors.muted, textAlign: 'center', padding: spacing.lg }, disclaimer: { ...rtl, color: colors.muted, textAlign: 'center', fontSize: 9, lineHeight: 16 } });
+
+const styles = StyleSheet.create({
+  metricRow: { flexDirection: rtl.row, gap: spacing.sm },
+  quickRow: { flexDirection: rtl.row, gap: spacing.xs },
+  empty: { color: colors.muted, textAlign: 'center', paddingVertical: spacing.lg },
+  disclaimer: { textAlign: 'center', paddingVertical: spacing.xs },
+});

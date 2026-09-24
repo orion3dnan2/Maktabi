@@ -1,13 +1,62 @@
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Button, colors, Input, ScreenContainer, spacing, typography } from '@maktabi/ui';
-import { BrandMark } from '@/components/BrandMark';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Checkbox, colors, elevation, Emblem, gradients, HeroDecoration, layout, PrimaryButton, radius, rtl, spacing, TextField, type } from '@maktabi/ui';
+
 export default function LoginScreen() {
-  const [identity, setIdentity] = useState(''); const [password, setPassword] = useState(''); const [visible, setVisible] = useState(false); const [remember, setRemember] = useState(true); const [error, setError] = useState('');
-  const login = () => { if (!identity.trim() || !password) { setError('أدخل اسم المستخدم وكلمة المرور للمتابعة'); return; } setError(''); router.replace('/(tabs)'); };
-  return <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><ScreenContainer style={styles.content}><BrandMark/><View style={styles.heading}><Text style={styles.title}>أهلاً بك في نظام مكتبي</Text><Text style={styles.subtitle}>سجّل الدخول إلى مساحة عملك القانونية</Text></View><Input label="اسم المستخدم أو البريد الإلكتروني" value={identity} onChangeText={setIdentity} autoCapitalize="none" autoComplete="username" placeholder="أدخل اسم المستخدم" error={error || undefined}/><Input label="كلمة المرور" value={password} onChangeText={setPassword} secureTextEntry={!visible} autoComplete="current-password" placeholder="أدخل كلمة المرور" endAdornment={<Pressable accessibilityRole="button" accessibilityLabel={visible ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'} onPress={() => setVisible(!visible)} hitSlop={10}><Ionicons name={visible ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.muted}/></Pressable>}/><View style={styles.options}><Pressable onPress={() => setRemember(!remember)} style={styles.remember}><View style={[styles.checkbox, remember && styles.checked]}>{remember ? <Ionicons name="checkmark" color={colors.navy950} size={14}/> : null}</View><Text style={styles.optionText}>تذكرني</Text></Pressable><Pressable><Text style={styles.link}>نسيت كلمة المرور؟</Text></Pressable></View><Button label="تسجيل الدخول" onPress={login}/><Text style={styles.demo}>تسجيل دخول تجريبي — لا تُدخل بيانات حقيقية</Text></ScreenContainer></KeyboardAvoidingView>;
+  const insets = useSafeAreaInsets();
+  const [identity, setIdentity] = useState(''); const [password, setPassword] = useState('');
+  const [visible, setVisible] = useState(false); const [remember, setRemember] = useState(true);
+  const [errors, setErrors] = useState<{ identity?: string; password?: string }>({});
+  const login = () => {
+    const next = { identity: identity.trim() ? undefined : 'أدخل اسم المستخدم أو البريد الإلكتروني', password: password ? undefined : 'أدخل كلمة المرور' };
+    setErrors(next);
+    if (!next.identity && !next.password) router.replace('/(tabs)');
+  };
+  return <LinearGradient colors={gradients.hero} style={styles.flex}>
+    <HeroDecoration/>
+    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.lg }]} keyboardShouldPersistTaps="handled">
+        <View style={styles.brand}>
+          <Emblem size={104}/>
+          <Text style={[type.display, styles.center, styles.brandName]}>مكتبي</Text>
+          <Text style={[type.body, styles.center, { color: colors.onDarkMuted }]}>نظام إدارة مكاتب المحاماة والاستشارات القانونية</Text>
+        </View>
+        <View style={styles.sheet}>
+          <View style={styles.heading}>
+            <Text accessibilityRole="header" style={[type.title, styles.center, styles.title]}>تسجيل الدخول</Text>
+            <Text style={[type.body, styles.center, { color: colors.muted }]}>مرحباً بك، سجّل الدخول للوصول إلى الملفات والعملاء والمواعيد</Text>
+          </View>
+          <TextField label="اسم المستخدم أو البريد الإلكتروني" icon="mail-outline" value={identity} onChangeText={setIdentity} autoCapitalize="none" autoComplete="username" keyboardType="email-address" returnKeyType="next" error={errors.identity}/>
+          <TextField label="كلمة المرور" icon="lock-closed-outline" value={password} onChangeText={setPassword} secureTextEntry={!visible} autoComplete="current-password" returnKeyType="go" onSubmitEditing={login} error={errors.password}
+            endAdornment={<Pressable accessibilityRole="button" accessibilityLabel={visible ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'} onPress={() => setVisible(!visible)} hitSlop={10}><Ionicons name={visible ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.muted}/></Pressable>}/>
+          <View style={styles.options}>
+            <Checkbox checked={remember} onChange={setRemember} label="تذكرني"/>
+            <Pressable accessibilityRole="button" hitSlop={10} onPress={() => Alert.alert('نسيت كلمة المرور؟', 'ستتوفر استعادة كلمة المرور في دفعة لاحقة.')}><Text style={styles.link}>نسيت كلمة المرور؟</Text></Pressable>
+          </View>
+          <PrimaryButton label="دخول" onPress={login}/>
+          <View style={styles.footer}>
+            <Ionicons name="information-circle-outline" size={16} color={colors.muted}/>
+            <Text style={[type.caption, styles.center]}>تسجيل دخول تجريبي — لا تُدخل بيانات حقيقية</Text>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  </LinearGradient>;
 }
-const rtl = { textAlign: 'right' as const, writingDirection: 'rtl' as const };
-const styles = StyleSheet.create({ flex: { flex: 1, backgroundColor: colors.canvas }, content: { flexGrow: 1, justifyContent: 'center', gap: spacing.lg }, heading: { alignItems: 'center', gap: spacing.xs }, title: { ...rtl, color: colors.navy900, fontFamily: typography.medium, fontSize: 19 }, subtitle: { ...rtl, color: colors.muted, fontSize: 13 }, options: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }, remember: { minHeight: 44, flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.xs }, checkbox: { width: 20, height: 20, borderWidth: 1, borderColor: colors.gold600, borderRadius: 5, alignItems: 'center', justifyContent: 'center' }, checked: { backgroundColor: colors.gold500 }, optionText: { color: colors.ink, fontSize: 12 }, link: { color: colors.navy800, fontFamily: typography.medium, fontSize: 12 }, demo: { ...rtl, color: colors.muted, textAlign: 'center', fontSize: 10 } });
+const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  scroll: { flexGrow: 1, width: '100%', maxWidth: 520, alignSelf: 'center', justifyContent: 'center', paddingHorizontal: layout.screenGutter + spacing.xs, gap: spacing.xl },
+  brand: { alignItems: 'center', gap: spacing.xs },
+  brandName: { fontSize: 36, lineHeight: 54, color: colors.gold300, marginTop: spacing.xs },
+  center: { textAlign: 'center' },
+  sheet: { gap: spacing.md, padding: spacing.xl, borderRadius: radius.xl + 4, backgroundColor: colors.surface, ...elevation.raised },
+  heading: { gap: spacing.xxs, marginBottom: spacing.xxs },
+  title: { fontSize: 26, lineHeight: 40, color: colors.navy900 },
+  options: { flexDirection: rtl.row, justifyContent: 'space-between', alignItems: 'center' },
+  link: { ...type.body, fontFamily: type.bodyStrong.fontFamily, color: colors.gold700 },
+  footer: { flexDirection: rtl.row, justifyContent: 'center', alignItems: 'center', gap: spacing.xxs },
+});

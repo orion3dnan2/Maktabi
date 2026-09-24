@@ -1,4 +1,5 @@
-import { AppHeader } from '@/components/AppHeader';
-import { EmptyState, ScreenContainer } from '@maktabi/ui';
-import { View } from 'react-native';
-export default function PlaceholderScreen() { return <View style={{ flex: 1 }}><AppHeader/><ScreenContainer><EmptyState title="العملاء" message="ستتوفر إدارة العملاء في الدفعة الثانية."/></ScreenContainer></View>; }
+import { PlaceholderScreen } from '@/components/PlaceholderScreen';
+
+export default function ClientsScreen() {
+  return <PlaceholderScreen title="العملاء" subtitle="إدارة علاقات العملاء ومتابعتها بسهولة" icon="people-outline" message="ستتوفر إدارة العملاء في الدفعة الثانية."/>;
+}

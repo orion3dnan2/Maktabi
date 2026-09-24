@@ -1,4 +1,5 @@
-import { AppHeader } from '@/components/AppHeader';
-import { EmptyState, ScreenContainer } from '@maktabi/ui';
-import { View } from 'react-native';
-export default function PlaceholderScreen() { return <View style={{ flex: 1 }}><AppHeader/><ScreenContainer><EmptyState title="الملفات" message="ستتوفر إدارة الملفات في الدفعة الثانية."/></ScreenContainer></View>; }
+import { PlaceholderScreen } from '@/components/PlaceholderScreen';
+
+export default function MattersScreen() {
+  return <PlaceholderScreen title="الملفات" subtitle="إدارة ومتابعة جميع الملفات والقضايا" icon="folder-open-outline" message="ستتوفر إدارة الملفات في الدفعة الثانية."/>;
+}
