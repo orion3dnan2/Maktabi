@@ -11,8 +11,8 @@ import {
   Text,
   View,
 } from "react-native";
-import { Button, Input } from "./primitives";
-import { colors, layout, spacing, typography } from "./theme";
+import { Button, Input } from "./index";
+import { colors, layout, spacing, fonts } from "./theme";
 export const featureStyles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.canvas },
   content: {
@@ -26,7 +26,7 @@ export const featureStyles = StyleSheet.create({
   text: {
     textAlign: "right",
     writingDirection: "rtl",
-    fontFamily: typography.regular,
+    fontFamily: fonts.regular,
     fontSize: 14,
     lineHeight: 23,
     color: colors.ink,
@@ -41,7 +41,7 @@ export const featureStyles = StyleSheet.create({
   title: {
     textAlign: "right",
     writingDirection: "rtl",
-    fontFamily: typography.medium,
+    fontFamily: fonts.medium,
     color: colors.navy900,
     fontSize: 19,
     lineHeight: 29,
