@@ -3,9 +3,26 @@ import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, Emblem, gradients, HeroDecoration, spacing, type } from '@maktabi/ui';
+import { supabase } from '../src/lib/supabase';
 
 export default function SplashScreen() {
-  useEffect(() => { const timer = setTimeout(() => router.replace('/login'), 900); return () => clearTimeout(timer); }, []);
+  useEffect(() => {
+    let mounted = true;
+
+    const routeFromSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!mounted) return;
+
+      setTimeout(() => {
+        if (!mounted) return;
+        router.replace(data.session ? '/(tabs)' : '/login');
+      }, 700);
+    };
+
+    void routeFromSession();
+    return () => { mounted = false; };
+  }, []);
+
   return <LinearGradient colors={gradients.hero} style={styles.screen}>
     <HeroDecoration/>
     <Emblem size={112}/>
@@ -16,6 +33,7 @@ export default function SplashScreen() {
     <View style={styles.line}/>
   </LinearGradient>;
 }
+
 const styles = StyleSheet.create({
   screen: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.xl, padding: spacing.xl },
   brand: { alignItems: 'center', gap: spacing.xxs },
