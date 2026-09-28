@@ -41,8 +41,8 @@
 
 ## ما تم التحقق منه في الكود
 
-- `apps/mobile/src/lib/supabase.ts`: Supabase client حقيقي، session محفوظ في Expo SecureStore.
-- `apps/mobile/app/index.tsx`: يوجّه حسب Supabase session.
+- `apps/mobile/src/lib/supabase.ts`: Supabase client حقيقي، session محفوظ في Expo SecureStore على iOS/Android وفي `localStorage` على الويب (SecureStore غير متاح على الويب).
+- `apps/mobile/app/index.tsx`: يوجّه حسب Supabase session عبر `src/lib/initialRoute.ts`؛ أي فشل في التخزين أو session تالف أو انتظار أطول من 10 ثوانٍ يوجّه إلى `/login` بدلاً من تعليق شاشة البداية.
 - `apps/mobile/app/(auth)/login.tsx`: `signInWithPassword` حقيقي.
 - `apps/mobile/src/data/mockRepositories.ts`: Clients وMatters ما زالت session-local mock data وتضيع بعد reload.
 - `apps/mobile/src/data/mockDashboardRepository.ts`: Dashboard بالكامل تجريبي.
