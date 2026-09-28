@@ -8,7 +8,7 @@
 
 - Node.js 20+
 - pnpm 10+
-- تطبيق Expo Go متوافق مع Expo SDK 54، أو محاكي Android/iOS
+- تطبيق Expo Go متوافق مع Expo SDK 57، أو محاكي Android/iOS
 
 ## التشغيل
 

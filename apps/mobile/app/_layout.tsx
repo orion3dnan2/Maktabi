@@ -10,7 +10,7 @@ I18nManager.forceRTL(true);
 export default function RootLayout() {
   const router = useRouter(); const segments = useSegments();
   const [loaded, fontError] = useFonts({ Tajawal_400Regular, Tajawal_500Medium, Tajawal_700Bold, Tajawal_800ExtraBold });
-  useEffect(() => { if ((loaded || fontError) && !isUnlocked() && segments[0] !== '(auth)' && !(segments[0] === 'office' && segments[1] === 'backup')) router.replace('/login'); }, [loaded, fontError, segments, router]);
+  useEffect(() => { const [first, second] = segments as string[]; if ((loaded || fontError) && !isUnlocked() && first !== '(auth)' && !(first === 'office' && second === 'backup')) router.replace('/login'); }, [loaded, fontError, segments, router]);
   if (!loaded && !fontError) return <View style={{ flex: 1, backgroundColor: colors.navy950 }}/>;
   return <><StatusBar style="light"/><Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.canvas }, animation: 'fade' }}/></>;
 }
