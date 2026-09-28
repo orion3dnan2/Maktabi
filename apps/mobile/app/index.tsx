@@ -1,44 +1,8 @@
-import { useEffect } from 'react';
-import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, Emblem, gradients, HeroDecoration, spacing, type } from '@maktabi/ui';
-import { resolveInitialRoute } from '../src/lib/initialRoute';
-import { supabase } from '../src/lib/supabase';
-
+import { colors, typography } from '@maktabi/ui';
+import { Emblem, HeroBackdrop } from '@/components/luxe';
 export default function SplashScreen() {
-  useEffect(() => {
-    let mounted = true;
-
-    const routeFromSession = async () => {
-      const route = await resolveInitialRoute(() => supabase.auth.getSession());
-      if (!mounted) return;
-
-      setTimeout(() => {
-        if (!mounted) return;
-        router.replace(route);
-      }, 700);
-    };
-
-    void routeFromSession();
-    return () => { mounted = false; };
-  }, []);
-
-  return <LinearGradient colors={gradients.hero} style={styles.screen}>
-    <HeroDecoration/>
-    <Emblem size={112}/>
-    <View style={styles.brand}>
-      <Text style={[type.display, styles.center, styles.name]}>مكتبي</Text>
-      <Text style={[type.body, styles.center, { color: colors.onDarkMuted }]}>مساحتك القانونية، منظمة في مكان واحد</Text>
-    </View>
-    <View style={styles.line}/>
-  </LinearGradient>;
+  // RouteGuard in app/_layout.tsx moves on as soon as the saved session is checked.
+  return <HeroBackdrop style={styles.screen} scales={false}><Emblem size={120}/><Text style={styles.name}>مكتبي</Text><Text style={styles.message}>مساحتك القانونية، منظمة وآمنة</Text><View style={styles.line}/></HeroBackdrop>;
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.xl, padding: spacing.xl },
-  brand: { alignItems: 'center', gap: spacing.xxs },
-  name: { fontSize: 38, lineHeight: 56, color: colors.gold300 },
-  center: { textAlign: 'center' },
-  line: { width: 44, height: 3, borderRadius: 3, backgroundColor: colors.gold500 },
-});
+const styles = StyleSheet.create({ screen: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24 }, name: { color: colors.gold400, fontFamily: typography.black, fontSize: 44, lineHeight: 60 }, message: { color: '#D9DFE6', textAlign: 'center', writingDirection: 'rtl', fontFamily: typography.medium, fontSize: 15 }, line: { width: 42, height: 3, borderRadius: 3, backgroundColor: colors.gold500 } });

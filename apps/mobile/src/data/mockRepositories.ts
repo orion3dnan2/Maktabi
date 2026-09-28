@@ -7,6 +7,9 @@ import {
   type MatterRepository,
   type MatterType,
 } from "@maktabi/domain";
+import { emptyWorkflow, paidTotal, trustBalance, type MatterWorkflow, type WorkflowRepository } from './workflow';
+import { defaultOffice, type OfficeData } from './office';
+import { createOfficeOperations } from './officeOperations';
 export const OFFICE_ID = "office-1";
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 export const newId = () =>
@@ -23,7 +26,9 @@ export interface ClientProfileData {
 export interface ProfileRepository {
   getByClient(id: string): Promise<ClientProfileData>;
 }
+export interface RepositorySnapshot { version: 1; clients: Client[]; matters: Matter[]; profiles: [string, ClientProfileData][]; workflows: [string, MatterWorkflow][]; office?: OfficeData }
 export function createMockRepositories() {
+  let office = defaultOffice();
   const clients: Client[] = [
     {
       id: "c1",
@@ -162,6 +167,79 @@ export function createMockRepositories() {
       },
     ]),
   );
+  const workflows = new Map<string, MatterWorkflow>();
+  const requireMatter = (id: string) => {
+    const matter = matters.find((m) => m.id === id);
+    if (!matter) throw new Error('القضية غير موجودة');
+    return matter;
+  };
+  const getWorkflow = (id: string) => {
+    const m = requireMatter(id); const value = { ...emptyWorkflow(), ...workflows.get(id) };
+    if (!workflows.has(id) && m.nextEventAt) value.appointments.push({ id: `initial-${id}`, title: 'جلسة القضية', startsAt: m.nextEventAt, status: 'SCHEDULED' });
+    return copy(value);
+  };
+  const commitWorkflow = (id: string, value: MatterWorkflow, title: string) => {
+    value.activity.unshift({ title, date: new Date().toISOString() });
+    workflows.set(id, copy(value));
+    const m = requireMatter(id);
+    const next = value.appointments.filter((a) => a.status === 'SCHEDULED').sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0];
+    m.nextEventAt = next?.startsAt;
+  };
+  const writable = (id: string) => {
+    const m = requireMatter(id);
+    if (m.status === 'CLOSED' || m.status === 'ARCHIVED') throw new Error('القضية مغلقة؛ لا يمكن إضافة عمليات جديدة');
+    return getWorkflow(id);
+  };
+  const workflowRepository: WorkflowRepository = {
+    async getByMatter(id) { return getWorkflow(id); },
+    async addAppointment(id, item) {
+      if (!item.title.trim() || !Number.isFinite(Date.parse(item.startsAt))) throw new Error('عنوان الموعد وتاريخه مطلوبان');
+      const w = writable(id);
+      w.appointments.push({ ...item, title: item.title.trim(), startsAt: new Date(item.startsAt).toISOString(), id: newId(), status: 'SCHEDULED' });
+      commitWorkflow(id, w, `جدولة موعد: ${item.title.trim()}`);
+    },
+    async setAppointmentStatus(id, appointmentId, status) {
+      const w = writable(id); const a = w.appointments.find((a) => a.id === appointmentId);
+      if (!a || !['SCHEDULED', 'COMPLETED', 'CANCELLED'].includes(status)) throw new Error('الموعد أو الحالة غير صحيحة');
+      a.status = status;
+      commitWorkflow(id, w, `${status === 'COMPLETED' ? 'إتمام' : status === 'CANCELLED' ? 'إلغاء' : 'إعادة جدولة'} الموعد: ${a.title}`);
+    },
+    async setFees(id, amount) {
+      const w = writable(id);
+      if (!Number.isSafeInteger(amount) || amount <= 0 || amount < paidTotal(w)) throw new Error('الأتعاب يجب أن تكون موجبة ولا تقل عن المدفوع');
+      w.agreedFees = amount;
+      commitWorkflow(id, w, 'تسجيل اتفاق الأتعاب');
+    },
+    async recordPayment(id, receipt) {
+      const w = writable(id);
+      if (w.receipts.some((r) => r.id === receipt.id)) return;
+      if (!receipt.id || !receipt.number.trim() || !receipt.method.trim() || !Number.isFinite(Date.parse(receipt.date))) throw new Error('بيانات الإيصال غير مكتملة');
+      if ([...workflows.values()].some((v) => v.receipts.some((r) => r.number === receipt.number))) throw new Error('رقم الإيصال مستخدم بالفعل');
+      if (!Number.isSafeInteger(receipt.amount) || receipt.amount <= 0 || receipt.amount > w.agreedFees - paidTotal(w)) throw new Error('الدفعة يجب أن تكون موجبة ولا تتجاوز الأتعاب المتبقية');
+      w.receipts.push(copy(receipt));
+      commitWorkflow(id, w, `تسجيل دفعة وإصدار الإيصال ${receipt.number}`);
+    },
+    async addDocument(id, document) {
+      const w = writable(id);
+      if (!document.title.trim() || !document.name.trim() || !/^data:[\w.+/-]+;base64,[A-Za-z0-9+/]*={0,2}$/.test(document.dataUri) || document.dataUri.length > 1500000) throw new Error('اختر مستنداً صالحاً بحجم لا يتجاوز 1 ميجابايت');
+      if (w.documents.some((d) => d.id === document.id)) return;
+      w.documents.push(copy(document));
+      commitWorkflow(id, w, `إرفاق مستند: ${document.title}`);
+    },
+    async addNote(id, text) {
+      if (!text.trim()) throw new Error('اكتب الملاحظة أولاً');
+      const w = writable(id); w.notes.unshift({ id: newId(), text: text.trim(), date: new Date().toISOString() });
+      if (!w.stages.length) requireMatter(id).currentStage = text.trim();
+      commitWorkflow(id, w, 'إضافة ملاحظة متابعة');
+    },
+    async closeMatter(id) {
+      const w = writable(id);
+      if (w.appointments.some((a) => a.status === 'SCHEDULED')) throw new Error('أكمل أو ألغِ المواعيد المعلقة قبل إغلاق القضية');
+      if (w.deadlines.some((d) => !d.completed) || w.stages.some((s) => s.status === 'ACTIVE' || s.status === 'PENDING')) throw new Error('أنهِ مراحل الإجراءات والمواعيد النهائية قبل الإغلاق');
+      requireMatter(id).status = 'CLOSED';
+      commitWorkflow(id, w, 'إغلاق القضية');
+    },
+  };
   const clientRepository: ClientRepository = {
     async getById(id) {
       return copy(clients.find((c) => c.id === id) ?? null);
@@ -247,7 +325,7 @@ export function createMockRepositories() {
       for (const id of new Set(
         saved.parties.flatMap((p) => (p.clientId ? [p.clientId] : [])),
       )) {
-        const profile = await profileRepository.getByClient(id);
+        const profile = copy(profiles.get(id) ?? { agreedFees: 0, paidFees: 0, trustBalance: 0, expenses: 0, receipts: [], documents: [], activity: [] });
         profile.activity.unshift({
           title: `إنشاء / تحديث الملف ${saved.reference}`,
           date: new Date().toISOString().slice(0, 10),
@@ -258,7 +336,7 @@ export function createMockRepositories() {
   };
   const profileRepository: ProfileRepository = {
     async getByClient(id) {
-      return copy(
+      const result = copy(
         profiles.get(id) ?? {
           agreedFees: 0,
           paidFees: 0,
@@ -269,9 +347,33 @@ export function createMockRepositories() {
           activity: [],
         },
       );
+      for (const m of matters.filter((m) => m.parties.some((p) => p.isPrimary && p.clientId === id))) {
+        const w = workflows.has(m.id) ? getWorkflow(m.id) : undefined;
+        if (!w) continue;
+        result.agreedFees += w.agreedFees;
+        result.paidFees += paidTotal(w);
+        result.trustBalance += trustBalance(w);
+        result.expenses += w.expenses.reduce((n, e) => n + (e.voidReason ? 0 : e.amount), 0);
+        result.receipts.push(...w.receipts);
+        result.documents.push(...w.documents);
+        result.activity.push(...w.activity.map((a) => ({ ...a, title: `${m.reference} · ${a.title}` })));
+      }
+      result.activity.sort((a, b) => b.date.localeCompare(a.date));
+      return result;
     },
   };
-  return { clientRepository, matterRepository, profileRepository };
+  const officeRepository = createOfficeOperations({ get: () => copy(office), set: (value) => { office = copy(value); }, id: newId, matter: requireMatter, read: getWorkflow, write: writable, commit: commitWorkflow });
+  return { clientRepository, matterRepository, profileRepository, workflowRepository, officeRepository,
+    snapshot: (): RepositorySnapshot => copy({ version: 1, clients, matters, profiles: [...profiles], workflows: [...workflows], office }),
+    restore: (snapshot: RepositorySnapshot) => {
+      if (snapshot.version !== 1 || !Array.isArray(snapshot.clients) || !Array.isArray(snapshot.matters) || !Array.isArray(snapshot.profiles) || !Array.isArray(snapshot.workflows)) throw new Error('تعذر قراءة البيانات المحلية');
+      clients.splice(0, clients.length, ...copy(snapshot.clients));
+      matters.splice(0, matters.length, ...copy(snapshot.matters));
+      profiles.clear(); snapshot.profiles.forEach(([id, value]) => profiles.set(id, copy(value)));
+      workflows.clear(); snapshot.workflows.forEach(([id, value]) => workflows.set(id, copy(value)));
+      office = copy(snapshot.office ?? defaultOffice());
+    },
+  };
 }
 // Session-local mock persistence. Reloading the application restores the fictional fixtures.
 export const { clientRepository, matterRepository, profileRepository } =

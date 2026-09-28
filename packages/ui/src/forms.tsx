@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, type ReactNode } from "react";
 import {
   FlatList,
@@ -5,14 +6,13 @@ import {
   Platform,
   Modal,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { Button, Input } from "./index";
-import { colors, layout, spacing, fonts } from "./theme";
+import { Button, Input } from "./primitives";
+import { colors, layout, spacing, typography } from "./theme";
 export const featureStyles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.canvas },
   content: {
@@ -26,7 +26,7 @@ export const featureStyles = StyleSheet.create({
   text: {
     textAlign: "right",
     writingDirection: "rtl",
-    fontFamily: fonts.regular,
+    fontFamily: typography.regular,
     fontSize: 14,
     lineHeight: 23,
     color: colors.ink,
@@ -41,7 +41,7 @@ export const featureStyles = StyleSheet.create({
   title: {
     textAlign: "right",
     writingDirection: "rtl",
-    fontFamily: fonts.medium,
+    fontFamily: typography.medium,
     color: colors.navy900,
     fontSize: 19,
     lineHeight: 29,
@@ -229,3 +229,4 @@ export function DiscardChangesDialog({
     </Modal>
   );
 }
+

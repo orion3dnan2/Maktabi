@@ -5,18 +5,25 @@ import {
   useIsFocused,
   usePreventRemove,
   type NavigationAction,
-} from "@react-navigation/native";
+} from "expo-router/react-navigation";
 export function useResource<T>(fetcher: () => Promise<T>) {
   const [data, setData] = useState<T>();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [revision, setRevision] = useState(0);
   const isFocused = useIsFocused();
+  // Reset while rendering, not in the effect, whenever the effect below is about to fetch again.
+  const [requested, setRequested] = useState({ fetcher, revision, isFocused });
+  if (requested.fetcher !== fetcher || requested.revision !== revision || requested.isFocused !== isFocused) {
+    setRequested({ fetcher, revision, isFocused });
+    if (isFocused) {
+      setLoading(true);
+      setError("");
+    }
+  }
   useEffect(() => {
     if (!isFocused) return;
     let active = true;
-    setLoading(true);
-    setError("");
     fetcher()
       .then((result) => {
         if (active) setData(result);
@@ -55,4 +62,5 @@ export function useUnsavedChanges(dirty: boolean) {
 export const money = (minor: number) =>
   `${new Intl.NumberFormat("ar-SD").format(minor / 100)} ج.س`;
 export const demoNotice =
-  "بيانات خيالية • الحفظ تجريبي خلال الجلسة فقط؛ إعادة تشغيل التطبيق تعيد البيانات الأصلية.";
+  "نسخة محلية • تُحفظ البيانات على هذا الجهاز دون مزامنة مع خادم.";
+

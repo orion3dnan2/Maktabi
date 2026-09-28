@@ -29,7 +29,7 @@ import {
   matterRepository,
   newId,
   OFFICE_ID,
-} from "@/data/mockRepositories";
+} from "@/data/repositories";
 import { demoNotice, useResource, useUnsavedChanges } from "../shared/hooks";
 const fetchClients = () => clientRepository.listByOffice(OFFICE_ID);
 const stepNames = [
@@ -76,29 +76,28 @@ export default function MatterFormScreen() {
   const { cancel, confirmation } = useUnsavedChanges(
     !saved && (dirty || !!partyName.trim()),
   );
+  // Preselect the client once, while rendering, when the client list first loads.
+  if (resource.data && !initialized) {
+    const c = resource.data.find((c) => c.id === clientId);
+    if (c)
+      setMatter((m) => ({
+        ...m,
+        parties: [
+          {
+            id: newId(),
+            matterId: m.id,
+            clientId: c.id,
+            displayName: c.displayName,
+            role: "CLIENT",
+            isPrimary: true,
+          },
+        ],
+      }));
+    setInitialized(true);
+  }
   useEffect(() => {
-    if (resource.data && !initialized) {
-      const c = resource.data.find((c) => c.id === clientId);
-      if (c)
-        setMatter((m) => ({
-          ...m,
-          parties: [
-            {
-              id: newId(),
-              matterId: m.id,
-              clientId: c.id,
-              displayName: c.displayName,
-              role: "CLIENT",
-              isPrimary: true,
-            },
-          ],
-        }));
-      setInitialized(true);
-    }
-  }, [resource.data, clientId, initialized]);
-  useEffect(() => {
-    if (saved) router.replace("/(tabs)/matters");
-  }, [saved, router]);
+    if (saved) router.replace({ pathname: '/matters/[id]/workflow', params: { id: matter.id } });
+  }, [saved, router, matter.id]);
   const update = (patch: Partial<Matter>) => {
     setMatter((m) => ({ ...m, ...patch }));
     setDirty(true);
@@ -410,8 +409,7 @@ export default function MatterFormScreen() {
             </Text>
           ))}
           <BodyText muted>
-            ينشئ هذا النموذج الملف فقط. تفاصيل الملف وسير الإجراءات ضمن دفعة
-            لاحقة.
+            بعد الإنشاء ستنتقل إلى المواعيد والمستندات والأتعاب ومتابعة القضية.
           </BodyText>
         </>
       ) : null}
@@ -456,3 +454,4 @@ export default function MatterFormScreen() {
     </FormPage>
   );
 }
+

@@ -1,57 +1,45 @@
-import type { ComponentProps } from 'react';
-import { Ionicons } from '@expo/vector-icons';
-import type { Tabs } from 'expo-router';
+import { useState } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, elevation, fonts, gradients, type IconName, layout, rtl, spacing } from '@maktabi/ui';
+import { colors, elevation, gradients, typography } from '@maktabi/ui';
+import { row } from './luxe';
 
-type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
+export const tabs = {
+  index: { title: 'الرئيسية', icon: 'home-outline', active: 'home' },
+  matters: { title: 'القضايا', icon: 'scale-balance', active: 'scale-balance' },
+  clients: { title: 'العملاء', icon: 'add', active: 'people' },
+  calendar: { title: 'المواعيد', icon: 'calendar-outline', active: 'calendar' },
+  more: { title: 'المزيد', icon: 'ellipsis-horizontal', active: 'ellipsis-horizontal' },
+} as const;
+export type TabName = keyof typeof tabs;
 
-/** The five destinations, in Arabic reading order (right to left). `featured` is the raised centre item. */
-export const TAB_ITEMS = [
-  { name: 'index', title: 'الرئيسية', icon: 'home-outline', active: 'home' },
-  { name: 'matters', title: 'الملفات', icon: 'folder-open-outline', active: 'folder-open' },
-  { name: 'clients', title: 'العملاء', icon: 'people', active: 'people', featured: true },
-  { name: 'calendar', title: 'التقويم', icon: 'calendar-outline', active: 'calendar' },
-  { name: 'more', title: 'المزيد', icon: 'ellipsis-horizontal', active: 'ellipsis-horizontal' },
-] as const satisfies readonly { name: string; title: string; icon: IconName; active: IconName; featured?: boolean }[];
-
-export function BottomNavigation({ state, navigation }: TabBarProps) {
+export function BottomNavigation({ selected, onNavigate }: { selected: TabName; onNavigate: (name: TabName) => void }) {
   const insets = useSafeAreaInsets();
-  return <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, spacing.xs) }]}>
-    <View style={styles.items}>
-      {TAB_ITEMS.map((item) => {
-        const index = state.routes.findIndex((route) => route.name === item.name);
-        const route = state.routes[index];
-        if (!route) return null;
-        const focused = state.index === index;
-        const onPress = () => {
-          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-          if (!focused && !event.defaultPrevented) navigation.navigate(route.name, route.params);
-        };
-        const tint = focused ? colors.gold500 : colors.onDarkMuted;
-        const featured = 'featured' in item && item.featured;
-        return <Pressable key={item.name} accessibilityRole="tab" accessibilityLabel={item.title} accessibilityState={{ selected: focused }} onPress={onPress} style={styles.item}>
-          {featured
-            ? <LinearGradient colors={gradients.gold} style={[styles.featured, focused && styles.featuredActive]}><Ionicons name={item.active} size={26} color={colors.white}/></LinearGradient>
-            : <Ionicons name={focused ? item.active : item.icon} size={24} color={tint}/>}
-          <Text numberOfLines={1} style={[styles.label, { color: tint }, focused && styles.labelActive]}>{item.title}</Text>
-          <View style={[styles.underline, focused && styles.underlineActive]}/>
+  const [scale] = useState(() => new Animated.Value(1));
+  const spring = (toValue: number) => Animated.spring(scale, { toValue, useNativeDriver: true, friction: 6, tension: 220 }).start();
+  return <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+    <LinearGradient colors={gradients.navy} style={StyleSheet.absoluteFill}/>
+    <View style={[styles.items, { flexDirection: row }]}>
+      {(Object.keys(tabs) as TabName[]).map((name) => {
+        const tab = tabs[name]; const active = selected === name; const center = name === 'clients';
+        const Icon = name === 'matters' ? MaterialCommunityIcons : Ionicons;
+        return <Pressable key={name} accessibilityRole="tab" accessibilityLabel={tab.title} accessibilityState={{ selected: active }} onPress={() => onNavigate(name)} onPressIn={() => center && spring(0.93)} onPressOut={() => center && spring(1)} style={({ pressed }) => [styles.item, pressed && !center && { opacity: 0.65 }]}>
+          {center ? <Animated.View style={[styles.fab, { transform: [{ scale }] }]}><LinearGradient colors={gradients.gold} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[StyleSheet.absoluteFill, { borderRadius: 32 }]}/><Ionicons name={active ? 'people' : 'add'} size={32} color={colors.white}/></Animated.View> : <Icon name={(active ? tab.active : tab.icon) as never} size={26} color={active ? colors.gold400 : colors.white}/>}
+          <Text style={[styles.label, active && styles.active]}>{tab.title}</Text>
+          <View style={[styles.indicator, { opacity: active ? 1 : 0 }]}/>
         </Pressable>;
       })}
     </View>
   </View>;
 }
-
 const styles = StyleSheet.create({
-  bar: { backgroundColor: colors.navy950, borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingTop: spacing.xs, ...elevation.raised },
-  items: { width: '100%', maxWidth: layout.maxContentWidth, alignSelf: 'center', minHeight: layout.tabBarHeight - spacing.xs, flexDirection: rtl.row, alignItems: 'flex-end' },
-  item: { flex: 1, minHeight: layout.minTouchTarget, alignItems: 'center', justifyContent: 'flex-end', gap: 2 },
-  featured: { width: 60, height: 60, marginTop: -30, borderRadius: 30, alignItems: 'center', justifyContent: 'center', borderWidth: 4, borderColor: colors.navy950, ...elevation.raised },
-  featuredActive: { borderColor: colors.gold300 },
-  label: { fontFamily: fonts.medium, fontSize: 12, lineHeight: 19 },
-  labelActive: { fontFamily: fonts.bold },
-  underline: { width: 26, height: 3, borderRadius: 2, backgroundColor: 'transparent' },
-  underlineActive: { backgroundColor: colors.gold500 },
+  bar: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingTop: 10, backgroundColor: colors.navy950, ...elevation.raised },
+  items: { width: '100%', maxWidth: 680, alignSelf: 'center', alignItems: 'flex-end' },
+  item: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', minHeight: 57, gap: 5 },
+  label: { color: colors.white, fontFamily: typography.medium, fontSize: 13 },
+  active: { color: colors.gold400, fontFamily: typography.bold },
+  indicator: { width: 38, height: 2, borderRadius: 2, backgroundColor: colors.gold400 },
+  fab: { position: 'absolute', top: -35, width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: '#FFF1D0', alignItems: 'center', justifyContent: 'center', ...elevation.gold },
 });

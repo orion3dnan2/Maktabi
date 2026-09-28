@@ -1,28 +1,19 @@
 import type { DashboardRepository, DashboardSnapshot } from '@maktabi/domain';
-/** Sample timestamps relative to today, in office time (Khartoum, UTC+2), so the demo always looks current. */
-const at = (dayOffset: number, hour: number, minute = 0): string => {
-  const date = new Date(); date.setUTCHours(hour - 2, minute, 0, 0); date.setUTCDate(date.getUTCDate() + dayOffset);
-  return date.toISOString();
-};
-const buildSnapshot = (): DashboardSnapshot => ({
-  currentUser: { id: 'user-1', officeId: 'office-1', fullName: 'محمد أحمد', role: 'OWNER', isActive: true },
-  office: { id: 'office-1', name: 'مكتب العدالة للمحاماة', defaultCurrency: 'SDG' },
-  todaysSessions: [
-    { id: 's1', matterId: 'm1', title: 'أحمد محمد ضد شركة النيل', authority: 'محكمة افتراضية — بيانات تجريبية', room: 'قاعة ٢', startsAt: at(0, 10, 30), status: 'SCHEDULED' },
-    { id: 's2', matterId: 'm2', title: 'مطالبة عمالية تجريبية', authority: 'جهة قضائية افتراضية', startsAt: at(0, 12), status: 'SCHEDULED' },
-  ],
-  upcomingDeadlines: [
-    { id: 'd1', matterId: 'm3', title: 'موعد إيداع مذكرة — تجريبي', dueAt: at(3, 15), priority: 'URGENT', status: 'OPEN', source: 'USER_ENTERED' },
-    { id: 'd2', matterId: 'm2', title: 'متابعة مستندات الموكل', dueAt: at(6, 15), priority: 'NORMAL', status: 'OPEN', source: 'USER_ENTERED' },
-  ],
-  activeMatters: 24,
-  outstandingFees: { amountMinor: 485000000, currency: 'SDG' },
-  overdueFeeItems: 3,
-  recentActivity: [
-    { id: 'a1', officeId: 'office-1', kind: 'MATTER', title: 'تم تحديث ملف تجريبي', detail: 'أضيف محضر الجلسة', happenedAt: at(0, 8, 15) },
-    { id: 'a2', officeId: 'office-1', kind: 'CLIENT', title: 'تمت إضافة موكل تجريبي', detail: 'شركة الندى الافتراضية', happenedAt: at(-1, 17, 20) },
-    { id: 'a3', officeId: 'office-1', kind: 'PAYMENT', title: 'تم تسجيل دفعة تجريبية', detail: '٣٥٠٬٠٠٠ ج.س', happenedAt: at(-1, 13, 40) },
-  ],
-});
-export class MockDashboardRepository implements DashboardRepository { async getSnapshot(): Promise<DashboardSnapshot> { await new Promise((resolve) => setTimeout(resolve, 180)); return buildSnapshot(); } }
+import { clientRepository, matterRepository, workflowRepository, profileRepository, OFFICE_ID } from './repositories';
+const sameDay = (iso: string) => new Date(iso).toDateString() === new Date().toDateString();
+export class MockDashboardRepository implements DashboardRepository {
+  async getSnapshot(): Promise<DashboardSnapshot> {
+    const [clients, matters] = await Promise.all([clientRepository.listByOffice(OFFICE_ID), matterRepository.listByOffice(OFFICE_ID)]);
+    const [workflows, profiles] = await Promise.all([Promise.all(matters.map(async (matter) => ({ matter, workflow: await workflowRepository.getByMatter(matter.id) }))), Promise.all(clients.map((c) => profileRepository.getByClient(c.id)))]);
+    return {
+      currentUser: { id: 'user-1', officeId: OFFICE_ID, fullName: 'محمد أحمد', role: 'OWNER', isActive: true },
+      office: { id: OFFICE_ID, name: 'مكتبي', defaultCurrency: 'SDG' },
+      todaysSessions: workflows.flatMap(({ matter: m, workflow: w }) => m.status !== 'ACTIVE' ? [] : w.appointments.filter((a) => a.status === 'SCHEDULED' && sameDay(a.startsAt)).map((a) => ({ id: a.id, matterId: m.id, title: a.title, authority: m.authority ?? '', startsAt: a.startsAt, status: 'SCHEDULED' as const }))).sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
+      upcomingDeadlines: [], activeMatters: matters.filter((m) => m.status === 'ACTIVE').length,
+      outstandingFees: { amountMinor: profiles.reduce((n, p) => n + p.agreedFees - p.paidFees, 0), currency: 'SDG' },
+      overdueFeeItems: 0,
+      recentActivity: workflows.flatMap(({ matter: m, workflow: w }) => w.activity.map((a, i) => ({ id: `${m.id}-${i}`, officeId: OFFICE_ID, kind: 'MATTER' as const, title: m.title, detail: a.title, happenedAt: a.date }))).sort((a, b) => b.happenedAt.localeCompare(a.happenedAt)).slice(0, 8),
+    };
+  }
+}
 export const dashboardRepository: DashboardRepository = new MockDashboardRepository();

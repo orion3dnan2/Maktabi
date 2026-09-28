@@ -1,92 +1,57 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Checkbox, colors, elevation, Emblem, gradients, HeroDecoration, layout, PrimaryButton, radius, rtl, spacing, TextField, type } from '@maktabi/ui';
-import { supabase } from '../../src/lib/supabase';
+import { useRouter } from 'expo-router';
+import { Alert, Platform, Pressable, Text, View } from 'react-native';
+import { colors } from '@maktabi/ui';
+import { GoldButton, row } from '@/components/luxe';
+import { useAuth } from '@/auth/AuthProvider';
+import { VaultPasswordMismatch } from '@/data/vault';
+import { AuthField, AuthLayout, authStyles } from '@/features/auth/AuthLayout';
+
+const REMEMBER_KEY = 'maktabi:remember-phone';
 
 export default function LoginScreen() {
-  const insets = useSafeAreaInsets();
-  const [identity, setIdentity] = useState('');
-  const [password, setPassword] = useState('');
-  const [visible, setVisible] = useState(false);
-  const [remember, setRemember] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ identity?: string; password?: string }>({});
+  const router = useRouter(); const auth = useAuth();
+  const [phone, setPhone] = useState(''); const [password, setPassword] = useState(''); const [visible, setVisible] = useState(false);
+  const [remember, setRemember] = useState(true); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
+  const [localDataLocked, setLocalDataLocked] = useState(false);
+  useEffect(() => { void AsyncStorage.getItem(REMEMBER_KEY).then((p) => { if (p) setPhone(p); }).catch(() => undefined); }, []);
 
-  const login = async () => {
-    const email = identity.trim();
-    const next = {
-      identity: email ? undefined : 'أدخل البريد الإلكتروني',
-      password: password ? undefined : 'أدخل كلمة المرور',
-    };
-
-    setErrors(next);
-    if (next.identity || next.password || loading) return;
-
-    setLoading(true);
-    let error: unknown;
+  const submit = async (discardLocal = false) => {
+    if (busy) return;
+    if (!phone.trim() || !password) { setError('أدخل رقم الهاتف وكلمة المرور للمتابعة'); return; }
+    setBusy(true); setError(''); setLocalDataLocked(false);
     try {
-      ({ error } = await supabase.auth.signInWithPassword({ email, password }));
-    } catch (thrown) {
-      // Session storage failures are rethrown by auth-js instead of being returned as `error`.
-      error = thrown;
-    } finally {
-      setLoading(false);
-    }
-
-    if (error) {
-      Alert.alert('تعذر تسجيل الدخول', 'تحقق من البريد الإلكتروني وكلمة المرور ثم حاول مرة أخرى.');
-      return;
-    }
-
-    router.replace('/(tabs)');
+      await (discardLocal ? auth.signInDiscardingLocalData(phone, password) : auth.signIn(phone, password));
+      if (remember) await AsyncStorage.setItem(REMEMBER_KEY, phone); else await AsyncStorage.removeItem(REMEMBER_KEY);
+      setPassword('');
+    } catch (e) {
+      if (e instanceof VaultPasswordMismatch) { setLocalDataLocked(true); setError(`${e.message} أدخل كلمة المرور القديمة، أو ابدأ بيانات جديدة على هذا الجهاز.`); }
+      else setError(e instanceof Error ? e.message : 'تعذر تسجيل الدخول');
+    } finally { setBusy(false); }
+  };
+  const confirmDiscard = () => {
+    const message = 'سيتم حذف بيانات المكتب المحفوظة محلياً لهذا الحساب على هذا الجهاز فقط. لا يمكن التراجع.';
+    if (Platform.OS === 'web') { if (globalThis.confirm?.(message)) void submit(true); return; }
+    Alert.alert('بدء بيانات جديدة', message, [{ text: 'إلغاء', style: 'cancel' }, { text: 'حذف والمتابعة', style: 'destructive', onPress: () => void submit(true) }]);
   };
 
-  return <LinearGradient colors={gradients.hero} style={styles.flex}>
-    <HeroDecoration/>
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.lg }]} keyboardShouldPersistTaps="handled">
-        <View style={styles.brand}>
-          <Emblem size={104}/>
-          <Text style={[type.display, styles.center, styles.brandName]}>مكتبي</Text>
-          <Text style={[type.body, styles.center, { color: colors.onDarkMuted }]}>نظام إدارة مكاتب المحاماة والاستشارات القانونية</Text>
-        </View>
-        <View style={styles.sheet}>
-          <View style={styles.heading}>
-            <Text accessibilityRole="header" style={[type.title, styles.center, styles.title]}>تسجيل الدخول</Text>
-            <Text style={[type.body, styles.center, { color: colors.muted }]}>مرحباً بك، سجّل الدخول للوصول إلى الملفات والعملاء والمواعيد</Text>
-          </View>
-          <TextField label="البريد الإلكتروني" icon="mail-outline" value={identity} onChangeText={setIdentity} autoCapitalize="none" autoComplete="email" keyboardType="email-address" returnKeyType="next" error={errors.identity}/>
-          <TextField label="كلمة المرور" icon="lock-closed-outline" value={password} onChangeText={setPassword} secureTextEntry={!visible} autoComplete="current-password" returnKeyType="go" onSubmitEditing={() => void login()} error={errors.password}
-            endAdornment={<Pressable accessibilityRole="button" accessibilityLabel={visible ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'} onPress={() => setVisible(!visible)} hitSlop={10}><Ionicons name={visible ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.muted}/></Pressable>}/>
-          <View style={styles.options}>
-            <Checkbox checked={remember} onChange={setRemember} label="تذكرني"/>
-            <Pressable accessibilityRole="button" hitSlop={10} onPress={() => Alert.alert('نسيت كلمة المرور؟', 'سنربط استعادة كلمة المرور مع Supabase في الخطوة التالية.')}><Text style={styles.link}>نسيت كلمة المرور؟</Text></Pressable>
-          </View>
-          <PrimaryButton label={loading ? 'جارٍ الدخول...' : 'دخول'} onPress={() => void login()}/>
-          <View style={styles.footer}>
-            <Ionicons name="shield-checkmark-outline" size={16} color={colors.muted}/>
-            <Text style={[type.caption, styles.center]}>تسجيل الدخول مؤمّن عبر Supabase Auth</Text>
-          </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
-  </LinearGradient>;
+  return <AuthLayout title="تسجيل الدخول" subtitle="أدخل رقم هاتفك وكلمة المرور التي أعطاك إياها مدير مكتبك.">
+    <AuthField icon="call-outline" error={!!error && !phone.trim()} value={phone} onChangeText={setPhone} placeholder="رقم الهاتف" autoCapitalize="none" autoCorrect={false} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" accessibilityLabel="رقم الهاتف" style={{ writingDirection: phone ? 'ltr' : 'rtl' }}/>
+    <AuthField icon="lock-closed-outline" error={!!error && !password} value={password} onChangeText={setPassword} secureTextEntry={!visible} placeholder="كلمة المرور" autoComplete="current-password" textContentType="password" accessibilityLabel="كلمة المرور" onSubmitEditing={() => void submit()}
+      end={<Pressable accessibilityRole="button" accessibilityLabel={visible ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'} onPress={() => setVisible(!visible)} hitSlop={10}><Ionicons name={visible ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.muted}/></Pressable>}/>
+    {error ? <Text accessibilityLiveRegion="polite" style={authStyles.error}>{error}</Text> : null}
+    <View style={[authStyles.options, { flexDirection: row }]}>
+      <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: remember }} onPress={() => setRemember(!remember)} style={[authStyles.remember, { flexDirection: row }]}>
+        <View style={[authStyles.checkbox, remember && authStyles.checked]}>{remember ? <Ionicons name="checkmark" color={colors.white} size={16}/> : null}</View>
+        <Text style={authStyles.optionText}>تذكر رقمي</Text>
+      </Pressable>
+    </View>
+    <GoldButton label={busy ? 'جارٍ الدخول…' : 'دخول'} onPress={() => void submit()}/>
+    {localDataLocked ? <Pressable accessibilityRole="button" onPress={confirmDiscard} style={authStyles.secondary}><Text style={authStyles.secondaryText}>بدء بيانات جديدة على هذا الجهاز</Text></Pressable> : null}
+    <Text style={authStyles.note}>نسيت كلمة المرور؟ اطلب من مدير مكتبك تعيين كلمة مرور جديدة لك.</Text>
+    <Pressable accessibilityRole="link" onPress={() => router.push('/owner-setup')} hitSlop={8}><Text style={authStyles.link}>إعداد حساب مالك المنصة (برمز إعداد)</Text></Pressable>
+    <View style={[authStyles.secure, { flexDirection: row }]}><Ionicons name="lock-closed" size={16} color={colors.muted}/><Text style={authStyles.note}>اتصال مشفّر · كل مكتب يرى بياناته فقط</Text></View>
+  </AuthLayout>;
 }
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  scroll: { flexGrow: 1, width: '100%', maxWidth: 520, alignSelf: 'center', justifyContent: 'center', paddingHorizontal: layout.screenGutter + spacing.xs, gap: spacing.xl },
-  brand: { alignItems: 'center', gap: spacing.xs },
-  brandName: { fontSize: 36, lineHeight: 54, color: colors.gold300, marginTop: spacing.xs },
-  center: { textAlign: 'center' },
-  sheet: { gap: spacing.md, padding: spacing.xl, borderRadius: radius.xl + 4, backgroundColor: colors.surface, ...elevation.raised },
-  heading: { gap: spacing.xxs, marginBottom: spacing.xxs },
-  title: { fontSize: 26, lineHeight: 40, color: colors.navy900 },
-  options: { flexDirection: rtl.row, justifyContent: 'space-between', alignItems: 'center' },
-  link: { ...type.body, fontFamily: type.bodyStrong.fontFamily, color: colors.gold700 },
-  footer: { flexDirection: rtl.row, justifyContent: 'center', alignItems: 'center', gap: spacing.xxs },
-});

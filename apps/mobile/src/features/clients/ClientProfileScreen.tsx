@@ -20,7 +20,7 @@ import {
   clientRepository,
   matterRepository,
   profileRepository,
-} from "@/data/mockRepositories";
+} from "@/data/repositories";
 import { demoNotice, money, useResource } from "../shared/hooks";
 const sections = {
   overview: "نظرة عامة",
@@ -82,7 +82,7 @@ export default function ClientProfileScreen() {
             <BodyText>
               {r.number} · {money(r.amount)}
             </BodyText>
-            <BodyText muted>{r.date} · دفعة أتعاب تجريبية</BodyText>
+            <BodyText muted>{r.date} · دفعة أتعاب</BodyText>
           </View>
         ))
       ) : (
@@ -97,7 +97,7 @@ export default function ClientProfileScreen() {
         profile.documents.map((d) => (
           <View key={d.title} style={s.item}>
             <BodyText>{d.title}</BodyText>
-            <BodyText muted>{d.date} · سجل توضيحي، لا يوجد ملف مرفق</BodyText>
+            <BodyText muted>{d.date}</BodyText>
           </View>
         ))
       ) : (
@@ -204,6 +204,8 @@ export default function ClientProfileScreen() {
                 {matterTypes[m.type]} · {matterStatuses[m.status]}
               </BodyText>
               <BodyText muted>{m.authority}</BodyText>
+              <Button label={`متابعة الملف ${m.reference}`} onPress={() => router.push({ pathname: '/matters/[id]/workflow', params: { id: m.id } })}/>
+              <Button label="تفاصيل القضية" variant="secondary" onPress={() => router.push({ pathname: '/matters/[id]', params: { id: m.id } })}/>
             </Card>
           ))
         ) : (
@@ -237,3 +239,4 @@ export default function ClientProfileScreen() {
     </FormPage>
   );
 }
+

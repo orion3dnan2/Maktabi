@@ -1,9 +1,17 @@
+import type { ComponentProps } from 'react';
 import { Tabs } from 'expo-router';
-import { colors } from '@maktabi/ui';
-import { BottomNavigation, TAB_ITEMS } from '@/components/BottomNavigation';
+import { BottomNavigation, tabs, type TabName } from '@/components/BottomNavigation';
 
+type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
+function TabBar({ state, navigation }: TabBarProps) {
+  return <BottomNavigation selected={state.routes[state.index]!.name as TabName} onNavigate={(name) => {
+    const route = state.routes.find((r) => r.name === name)!;
+    const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+    if (!event.defaultPrevented) navigation.navigate(name);
+  }}/>;
+}
 export default function TabLayout() {
-  return <Tabs tabBar={(props) => <BottomNavigation {...props}/>} screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: colors.canvas } }}>
-    {TAB_ITEMS.map((tab) => <Tabs.Screen key={tab.name} name={tab.name} options={{ title: tab.title }}/>)}
+  return <Tabs tabBar={(props) => <TabBar {...props}/>} screenOptions={{ headerShown: false, animation: 'fade' }}>
+    {Object.entries(tabs).map(([name, tab]) => <Tabs.Screen key={name} name={name} options={{ title: tab.title }}/>)}
   </Tabs>;
 }

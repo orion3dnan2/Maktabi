@@ -1,25 +1,28 @@
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
-import { NotoSansArabic_400Regular } from '@expo-google-fonts/noto-sans-arabic/400Regular';
-import { NotoSansArabic_500Medium } from '@expo-google-fonts/noto-sans-arabic/500Medium';
-import { NotoSansArabic_700Bold } from '@expo-google-fonts/noto-sans-arabic/700Bold';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { I18nManager } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { I18nManager, View } from 'react-native';
+import { useFonts, Tajawal_400Regular, Tajawal_500Medium, Tajawal_700Bold, Tajawal_800ExtraBold } from '@expo-google-fonts/tajawal';
 import { colors } from '@maktabi/ui';
-
-// Native RTL takes effect from the next launch; layout tokens in @maktabi/ui keep Arabic order correct either way.
+import { AuthProvider, useAuth } from '@/auth/AuthProvider';
+import { canOpen, homeFor } from '@/auth/access';
 I18nManager.allowRTL(true);
 I18nManager.forceRTL(true);
-void SplashScreen.preventAutoHideAsync();
+
+/** Sends every user to the part of the app their role allows. The server enforces the same rules (RLS). */
+function RouteGuard() {
+  const router = useRouter(); const segments = useSegments() as string[]; const { status, access } = useAuth();
+  useEffect(() => {
+    if (status === 'loading') return;
+    const inAuth = segments[0] === '(auth)';
+    if (status === 'signedOut' || !access) { if (!inAuth) router.replace('/login'); return; }
+    if (!canOpen(access, segments)) router.replace(homeFor(access));
+  }, [status, access, segments, router]);
+  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.canvas }, animation: 'fade' }}/>;
+}
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({ NotoSansArabic_400Regular, NotoSansArabic_500Medium, NotoSansArabic_700Bold });
-  const ready = loaded || !!error;
-  useEffect(() => { if (ready) void SplashScreen.hideAsync(); }, [ready]);
-  if (!ready) return null;
-  // Every screen opens on a dark navy hero, so light status-bar content is correct throughout.
-  return <SafeAreaProvider><StatusBar style="light"/><Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.canvas }, animation: 'fade' }}/></SafeAreaProvider>;
+  const [loaded, fontError] = useFonts({ Tajawal_400Regular, Tajawal_500Medium, Tajawal_700Bold, Tajawal_800ExtraBold });
+  if (!loaded && !fontError) return <View style={{ flex: 1, backgroundColor: colors.navy950 }}/>;
+  return <AuthProvider><StatusBar style="light"/><RouteGuard/></AuthProvider>;
 }
