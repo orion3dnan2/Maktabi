@@ -14,17 +14,17 @@
 
 | المجال | الحالة | الملاحظة |
 |---|---|---|
-| Expo/React Native foundation | ✅ منجز | Expo SDK 54 + TypeScript + Expo Router |
-| Arabic RTL design system | ✅ منجز | Noto Sans Arabic + Navy/Gold tokens + reusable UI |
-| Splash + routing | ✅ منجز | يفحص Supabase session |
-| Supabase client | ✅ منجز | SecureStore + persisted auth session |
-| Login | 🟡 جزئي | تسجيل الدخول الحقيقي يعمل؛ reset password غير منفذ |
-| Office / profiles / membership | ❌ غير منفذ | لا يوجد tenant context حقيقي بعد |
-| RBAC / permissions | ❌ غير منفذ | Domain role أولي فقط، بلا enforcement/RLS |
-| Clients UI | 🟡 جزئي | List/Create/Edit/Profile موجودة؛ البيانات Mock |
-| Matters UI | 🟡 جزئي | List/Create + validation موجودة؛ البيانات Mock؛ التفاصيل/workflow غير مكتملة |
-| Dashboard | 🟡 جزئي | UI قوي لكن مصدره mockDashboardRepository |
-| Calendar / sessions | ❌ غير منفذ | Placeholder |
+| Expo/React Native foundation | ✅ منجز | Expo SDK 57 + TypeScript + Expo Router |
+| Arabic RTL design system | ✅ منجز | Tajawal + Navy/Gold tokens + reusable UI |
+| Splash + routing | ✅ منجز | يفحص Supabase session ثم يوجّه حسب الدور (RouteGuard) |
+| Supabase client | ✅ منجز | SecureStore مقسّم لأجزاء على iOS/Android + localStorage على الويب |
+| Login | 🟡 جزئي | دخول حقيقي برقم الهاتف وكلمة المرور؛ مدير المكتب يعيّن كلمة مرور جديدة؛ لا استعادة ذاتية |
+| Office / profiles / membership | 🟡 جزئي | المرحلة 1: مالك المنصة ← مكتب ومديره ← أعضاء عبر Edge Function `manage-users` ([التفاصيل](docs/phase-1-accounts.md)) |
+| RBAC / permissions | 🟡 جزئي | أدوار المكتب ودور الموكل `client` + RLS و`supabase/tests/phase1_access.sql`؛ جداول الشاشات لم تُنقل إلى Supabase بعد |
+| Clients UI | 🟡 جزئي | List/Create/Edit/Profile موجودة؛ البيانات محلية مشفّرة على الجهاز، ليست على الخادم |
+| Matters UI | 🟡 جزئي | List/Create + validation موجودة؛ البيانات محلية مشفّرة على الجهاز؛ التفاصيل/workflow غير مكتملة |
+| Dashboard | 🟡 جزئي | الملخص من mockDashboardRepository؛ العملاء والقضايا من المساحة المحلية |
+| Calendar / sessions | 🟡 جزئي | شاشة المواعيد تعرض مواعيد القضايا من المساحة المحلية |
 | Documents/scanner | ❌ غير منفذ | Domain model أولي فقط |
 | Fees/payments/receipts | ❌ غير منفذ | Domain types أولية فقط |
 | Expenses/client trust | ❌ غير منفذ | Domain types أولية فقط |
@@ -35,21 +35,21 @@
 | AI assistant | ❌ غير منفذ | مؤجل عمداً حتى استقرار البيانات والمكتبة |
 | Subscriptions | ❌ غير منفذ | غير منفذ |
 | WhatsApp integration | ❌ غير منفذ | غير منفذ |
-| Automated tests | 🟡 جزئي | Domain/format tests موجودة؛ لا يوجد E2E/RLS/offline suite |
+| Automated tests | 🟡 جزئي | Domain/auth/storage tests + اختبار RLS في SQL؛ لا يوجد E2E/offline suite |
 
-**التقييم الحالي:** الأساس البصري وDomain foundation جيدان، وSupabase Auth بدأ فعلياً. لكن بيانات العمل الأساسية (Clients/Matters/Dashboard) ما زالت Mock وليست production persistence. الأولوية الآن ليست إضافة شاشات كثيرة؛ الأولوية هي تحويل الأساس إلى multi-tenant Supabase architecture آمنة ثم ربط الصفحات الموجودة بها.
+**التقييم الحالي:** الأساس البصري وDomain foundation جيدان، وSupabase Auth والأدوار منفذة في المرحلة 1. لكن بيانات العمل الأساسية (Clients/Matters/Dashboard) ما زالت محلية على الجهاز أو Mock وليست production persistence. الأولوية الآن ليست إضافة شاشات كثيرة؛ الأولوية هي تحويل الأساس إلى multi-tenant Supabase architecture آمنة ثم ربط الصفحات الموجودة بها.
 
 ---
 
 ## ما تم التحقق منه في الكود
 
-- `apps/mobile/src/lib/supabase.ts`: Supabase client حقيقي، session محفوظ في Expo SecureStore على iOS/Android وفي `localStorage` على الويب (SecureStore غير متاح على الويب).
-- `apps/mobile/app/index.tsx`: يوجّه حسب Supabase session عبر `src/lib/initialRoute.ts`؛ أي فشل في التخزين أو session تالف أو انتظار أطول من 10 ثوانٍ يوجّه إلى `/login` بدلاً من تعليق شاشة البداية.
-- `apps/mobile/app/(auth)/login.tsx`: `signInWithPassword` حقيقي.
-- `apps/mobile/src/data/mockRepositories.ts`: Clients وMatters ما زالت session-local mock data وتضيع بعد reload.
-- `apps/mobile/src/data/mockDashboardRepository.ts`: Dashboard بالكامل تجريبي.
-- `apps/mobile/app/(tabs)/calendar.tsx`: Placeholder.
-- `apps/mobile/app/(tabs)/more.tsx`: Placeholder.
+- `apps/mobile/src/lib/supabase.ts`: Supabase client حقيقي، session محفوظ في Expo SecureStore على iOS/Android (مقسّم لأجزاء لأن الجلسة أكبر من حد 2KB) وفي `localStorage` على الويب.
+- `apps/mobile/app/_layout.tsx` + `src/auth/AuthProvider.tsx`: RouteGuard يوجّه حسب الدور. استعادة الجلسة عند التشغيل محدودة بـ 10 ثوانٍ عبر `src/lib/settleWithin.ts`؛ أي فشل في التخزين أو session تالف أو انتظار أطول يوجّه إلى `/login` بدلاً من تعليق شاشة البداية.
+- `apps/mobile/app/(auth)/login.tsx`: دخول برقم الهاتف (يتحول إلى بريد داخلي) عبر `signInWithPassword`.
+- `supabase/migrations/2026092817*` + `supabase/functions/manage-users/` + `supabase/tests/phase1_access.sql`: الأدوار وRLS وإنشاء الحسابات من الخادم (المرحلة 1).
+- `apps/mobile/src/data/repositories.ts` + `localRepositories.ts` + `vault.ts`: Clients وMatters في مساحة محلية مشفّرة لكل مستخدم على الجهاز؛ ليست على الخادم بعد.
+- `apps/mobile/src/data/mockDashboardRepository.ts`: ملخص Dashboard ما زال تجريبياً.
+- `apps/mobile/app/(tabs)/calendar.tsx`: مواعيد القضايا من المساحة المحلية.
 - `packages/domain/src/index.ts`: نماذج أولية جيدة لـOffice/User/Client/Matter/Workflow/Session/Deadline/Document/Fees/Payment/Receipt/Expense/Trust.
 - `packages/domain/src/clientsMatters.ts`: Arabic normalization/search + validation للقضايا والعملاء.
 - `packages/domain/src/clientsMatters.test.ts`: اختبارات Domain موجودة للعملاء والقضايا.
@@ -59,6 +59,8 @@
 ### فجوة يجب إصلاحها
 
 الـREADME القديم كان يقول إن المصادقة غير منفذة، بينما الكود الحالي يحتوي Supabase Auth فعلي. لذلك هذا الملف يجب أن يتغير دائماً مع التنفيذ ولا يُترك خلف الكود.
+
+**Migrations غير متطابقة مع قاعدة البيانات (يجب إصلاحها قبل المرحلة 2):** قاعدة Supabase فيها 10 migrations بينما `supabase/migrations` فيه 4 فقط. الـ6 الأساسية المطبّقة في 2026-09-27 (`maktabi_init` … `row_level_security_policies` و`storage_legal_documents_bucket`) غير موجودة في الـrepo، وmigrations المرحلة 1 مسجّلة في القاعدة بأرقام إصدار (`20260928140727` …) تختلف عن أسماء الملفات (`20260928170000` …).
 
 ---
 
