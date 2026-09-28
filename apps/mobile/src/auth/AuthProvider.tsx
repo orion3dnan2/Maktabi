@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { settleWithin } from '@/lib/settleWithin';
 import { supabase } from '@/lib/supabase';
 import { resetRepositories } from '@/data/repositories';
 import { discardUserVault, isUnlocked, lockVault, openUserVault, selectVaultUser, VaultPasswordMismatch } from '@/data/vault';
@@ -41,18 +42,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Cold start: a saved session is enough for the portal and the platform console.
   // Staff must type their password again because it unlocks this device's workspace.
+  // Any failure, or a restore still running after STARTUP_TIMEOUT_MS, ends on the login screen instead of the splash.
   useEffect(() => {
     let active = true;
-    (async () => {
+    let gaveUp = false;
+    const restore = async (): Promise<Access | undefined> => {
       const { data } = await supabase.auth.getSession();
-      if (!data.session) { if (active) setStatus('signedOut'); return; }
-      try {
-        const current = await loadAccess();
-        if (!active) return;
-        if (accessProblem(current) || (isStaff(current) && !isUnlocked())) { await supabase.auth.signOut(); if (active) clearLocal(); return; }
-        setAccess(current); setStatus('ready');
-      } catch { if (active) setStatus('signedOut'); }
-    })();
+      if (!data.session) return undefined;
+      const current = await loadAccess();
+      if (accessProblem(current) || (isStaff(current) && !isUnlocked())) {
+        // After a timeout the user may already have signed in again; a late sign-out would end that session.
+        if (!gaveUp) await supabase.auth.signOut();
+        return undefined;
+      }
+      return current;
+    };
+    void settleWithin(restore, undefined).then((current) => {
+      gaveUp = true;
+      if (!active) return;
+      if (current) { setAccess(current); setStatus('ready'); } else clearLocal();
+    });
     const { data: listener } = supabase.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT' && active) clearLocal(); });
     return () => { active = false; listener.subscription.unsubscribe(); };
   }, [clearLocal]);
