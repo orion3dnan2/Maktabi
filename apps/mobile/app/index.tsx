@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, Emblem, gradients, HeroDecoration, spacing, type } from '@maktabi/ui';
+import { resolveInitialRoute } from '../src/lib/initialRoute';
 import { supabase } from '../src/lib/supabase';
 
 export default function SplashScreen() {
@@ -10,12 +11,12 @@ export default function SplashScreen() {
     let mounted = true;
 
     const routeFromSession = async () => {
-      const { data } = await supabase.auth.getSession();
+      const route = await resolveInitialRoute(() => supabase.auth.getSession());
       if (!mounted) return;
 
       setTimeout(() => {
         if (!mounted) return;
-        router.replace(data.session ? '/(tabs)' : '/login');
+        router.replace(route);
       }, 700);
     };
 

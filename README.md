@@ -41,8 +41,8 @@
 
 ## ما تم التحقق منه في الكود
 
-- `apps/mobile/src/lib/supabase.ts`: Supabase client حقيقي، session محفوظ في Expo SecureStore.
-- `apps/mobile/app/index.tsx`: يوجّه حسب Supabase session.
+- `apps/mobile/src/lib/supabase.ts`: Supabase client حقيقي، session محفوظ في Expo SecureStore على iOS/Android وفي `localStorage` على الويب (SecureStore غير متاح على الويب).
+- `apps/mobile/app/index.tsx`: يوجّه حسب Supabase session عبر `src/lib/initialRoute.ts`؛ أي فشل في التخزين أو session تالف أو انتظار أطول من 10 ثوانٍ يوجّه إلى `/login` بدلاً من تعليق شاشة البداية.
 - `apps/mobile/app/(auth)/login.tsx`: `signInWithPassword` حقيقي.
 - `apps/mobile/src/data/mockRepositories.ts`: Clients وMatters ما زالت session-local mock data وتضيع بعد reload.
 - `apps/mobile/src/data/mockDashboardRepository.ts`: Dashboard بالكامل تجريبي.
@@ -414,11 +414,14 @@
 
 ```bash
 pnpm install
+cp apps/mobile/.env.example apps/mobile/.env   # Windows: copy apps\mobile\.env.example apps\mobile\.env
 pnpm --filter @maktabi/mobile start
 ```
 
+ملف `apps/mobile/.env` مطلوب لإعدادات Supabase؛ بدونه يتوقف التطبيق عند التشغيل برسالة `Missing Supabase environment variables`. بعد تعديله أعد تشغيل Metro.
+
 المتطلبات:
-- Node.js 20+
+- Node.js 22 LTS بإصدار 22.13.0 أو أحدث (مثبت في `.nvmrc`؛ `.npmrc` يفعّل `engine-strict` فيرفض `pnpm install` أي إصدار أقدم). `@supabase/supabase-js` يتطلب Node 22، و`vite`/`eslint` يتطلبان 22.13 على الأقل.
 - pnpm 10+
 - Expo Go المتوافق مع SDK 54 أو Android/iOS simulator
 

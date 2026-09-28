@@ -27,8 +27,15 @@ export default function LoginScreen() {
     if (next.identity || next.password || loading) return;
 
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
+    let error: unknown;
+    try {
+      ({ error } = await supabase.auth.signInWithPassword({ email, password }));
+    } catch (thrown) {
+      // Session storage failures are rethrown by auth-js instead of being returned as `error`.
+      error = thrown;
+    } finally {
+      setLoading(false);
+    }
 
     if (error) {
       Alert.alert('تعذر تسجيل الدخول', 'تحقق من البريد الإلكتروني وكلمة المرور ثم حاول مرة أخرى.');
