@@ -18,7 +18,7 @@ import {
   Input,
   LoadingState,
 } from "@maktabi/ui";
-import { clientRepository, newId, OFFICE_ID } from "@/data/mockRepositories";
+import { clientRepository, newId, OFFICE_ID } from "@/data/repositories";
 import { demoNotice, useResource, useUnsavedChanges } from "../shared/hooks";
 export default function ClientFormScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -169,3 +169,4 @@ export default function ClientFormScreen() {
     </FormPage>
   );
 }
+

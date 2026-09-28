@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, type ReactNode } from "react";
 import {
   FlatList,
@@ -5,7 +6,6 @@ import {
   Platform,
   Modal,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -229,3 +229,4 @@ export function DiscardChangesDialog({
     </Modal>
   );
 }
+

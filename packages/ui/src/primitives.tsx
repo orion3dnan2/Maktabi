@@ -1,5 +1,6 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ReactNode } from 'react';
-import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, type TextInputProps, type ViewStyle, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, type TextInputProps, type ViewStyle, View } from 'react-native';
 import { colors, elevation, layout, radius, spacing, typography } from './theme';
 
 
@@ -33,3 +34,4 @@ const styles = StyleSheet.create({
   card: { padding: spacing.md, gap: spacing.xs, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, backgroundColor: colors.surface, ...elevation.card }, badge: { alignSelf: 'flex-start', borderRadius: radius.full, paddingVertical: 4, paddingHorizontal: spacing.sm }, badge_neutral: { backgroundColor: '#EFF1F2' }, badge_gold: { backgroundColor: colors.gold100 }, badge_success: { backgroundColor: '#E5F3EB' }, badge_danger: { backgroundColor: '#F9E9E8' }, badgeText: { fontSize: 11, fontFamily: typography.medium }, badgeText_neutral: { color: colors.muted }, badgeText_gold: { color: colors.gold600 }, badgeText_success: { color: colors.success }, badgeText_danger: { color: colors.danger },
   sectionHeader: { minHeight: 36, flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }, sectionTitle: { ...rtlText, color: colors.navy900, fontFamily: typography.medium, fontSize: 17 }, sectionAction: { color: colors.gold600, fontFamily: typography.medium, fontSize: 12 }, state: { minHeight: 160, justifyContent: 'center', alignItems: 'center', gap: spacing.sm, padding: spacing.xl }, stateTitle: { ...rtlText, color: colors.navy900, fontFamily: typography.medium, fontSize: 16 }, stateBody: { ...rtlText, color: colors.muted, fontSize: 13, lineHeight: 22 }, offline: { paddingVertical: spacing.xs, paddingHorizontal: spacing.md, backgroundColor: colors.gold100 }, offlineText: { ...rtlText, color: colors.navy900, fontSize: 11 }, rowBetween: { flexDirection: 'row-reverse', justifyContent: 'space-between' }, reference: { ...rtlText, color: colors.muted, fontSize: 12 }, cardTitle: { ...rtlText, color: colors.ink, fontFamily: typography.medium, fontSize: 15 }, cardMeta: { ...rtlText, color: colors.muted, fontSize: 12 },
 });
+
