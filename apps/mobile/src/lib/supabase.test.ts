@@ -22,13 +22,13 @@ vi.mock('expo-secure-store', () => secureStore);
 
 const STORAGE_KEY = 'sb-maktabitest-auth-token';
 
-const passwordGrant = () => ({
+const passwordGrant = (userMetadata: Record<string, string> = {}) => ({
   access_token: 'header.payload.signature',
   token_type: 'bearer',
   expires_in: 3600,
   expires_at: Math.floor(Date.now() / 1000) + 3600,
   refresh_token: 'refresh-token',
-  user: { id: '00000000-0000-4000-8000-000000000001', aud: 'authenticated', role: 'authenticated', email: 'lawyer@example.com', app_metadata: {}, user_metadata: {}, created_at: '2026-09-28T00:00:00Z' },
+  user: { id: '00000000-0000-4000-8000-000000000001', aud: 'authenticated', role: 'authenticated', email: 'lawyer@example.com', app_metadata: {}, user_metadata: userMetadata, created_at: '2026-09-28T00:00:00Z' },
 });
 
 const clients: { auth: { stopAutoRefresh: () => Promise<void> } }[] = [];
@@ -70,6 +70,21 @@ describe('supabase client storage', () => {
     const restarted = await startApp();
     const { data } = await restarted.auth.getSession();
     expect(data.session?.user.email).toBe('lawyer@example.com');
+  });
+
+  it('splits a session larger than one SecureStore value into chunks and restores it', async () => {
+    const userMetadata = { full_name: 'محامٍ تجريبي', notes: 'x'.repeat(3000) };
+    vi.stubGlobal('fetch', vi.fn(async () =>
+      new Response(JSON.stringify(passwordGrant(userMetadata)), { status: 200, headers: { 'Content-Type': 'application/json' } })));
+    const { error } = await (await startApp()).auth.signInWithPassword({ email: 'lawyer@example.com', password: 'secret' });
+    expect(error).toBeNull();
+
+    expect(Number(secureStore.items.get(`${STORAGE_KEY}.n`))).toBeGreaterThan(1);
+    expect(secureStore.items.has(STORAGE_KEY)).toBe(false);
+    for (const value of secureStore.items.values()) expect(new TextEncoder().encode(value).length).toBeLessThanOrEqual(2048);
+
+    const { data } = await (await startApp()).auth.getSession();
+    expect(data.session?.user.user_metadata).toEqual(userMetadata);
   });
 
   it('treats an unparseable SecureStore session as signed out and replaces it on sign-in', async () => {
