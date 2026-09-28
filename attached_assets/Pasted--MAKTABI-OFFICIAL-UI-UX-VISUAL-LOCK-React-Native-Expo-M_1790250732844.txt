@@ -1,0 +1,754 @@
+# MAKTABI — OFFICIAL UI / UX VISUAL LOCK
+# React Native + Expo Mobile App
+# DESIGN IMPLEMENTATION ONLY
+
+You are working on the existing MAKTABI — مكتبي codebase.
+
+The application is a REAL MOBILE APPLICATION built with:
+
+- React Native
+- Expo
+- TypeScript
+- Expo Router
+- Arabic-first RTL
+
+Do NOT convert this application to:
+
+- React Web
+- Vite
+- Next.js
+- PWA
+- HTML/CSS-based UI
+
+The mobile React Native architecture is mandatory.
+
+============================================================
+1. OFFICIAL DESIGN REFERENCES
+============================================================
+
+The following two designs are now the OFFICIAL visual references for Maktabi:
+
+REFERENCE 1:
+https://chatgpt.com/s/m_6ab508babcf881919bfe44918ae39949
+
+REFERENCE 2:
+https://chatgpt.com/s/m_6ab508d1ae648191b7912cc6fc0a0484
+
+Before writing code:
+
+1. Open and inspect BOTH references carefully.
+2. Study every visible screen.
+3. Identify:
+   - layout
+   - visual hierarchy
+   - navigation
+   - colors
+   - typography
+   - spacing
+   - cards
+   - buttons
+   - inputs
+   - search
+   - headers
+   - icons
+   - tabs
+   - lists
+   - status indicators
+   - empty areas
+   - bottom navigation
+   - Arabic RTL behavior
+
+Treat these designs as the visual source of truth.
+
+Do NOT redesign them according to your own taste.
+
+Do NOT replace them with a generic SaaS design.
+
+Do NOT simplify the design unnecessarily.
+
+The goal is to make the real Maktabi application visually match these references as closely as reasonably possible.
+
+IMPORTANT:
+
+If you cannot access or inspect either reference link, STOP.
+
+Do not invent the design.
+
+Report:
+
+"DESIGN REFERENCES NOT ACCESSIBLE"
+
+and request screenshots/exported images from the product owner.
+
+Do not continue by guessing.
+
+============================================================
+2. DESIGN PRIORITY
+============================================================
+
+Visual implementation priority:
+
+1. Match the supplied references.
+2. Preserve good mobile usability.
+3. Preserve Arabic RTL.
+4. Preserve accessibility.
+5. Preserve existing Maktabi business logic.
+
+If an existing screen conflicts visually with the new references:
+
+the NEW reference design wins visually.
+
+If the reference contains purely decorative or technically impossible behavior:
+
+adapt it carefully to React Native while preserving the visual result.
+
+============================================================
+3. DO NOT CHANGE PRODUCT LOGIC
+============================================================
+
+This task is primarily a UI/UX redesign.
+
+Do NOT rewrite:
+
+- domain architecture
+- Matter model
+- Client model
+- repositories
+- financial rules
+- receipt rules
+- MatterParty relationships
+- workflow architecture
+- backend strategy
+- offline architecture
+
+unless a small change is strictly required for presenting the UI.
+
+Preserve existing working behavior.
+
+This is NOT a feature-expansion task.
+
+============================================================
+4. BUILD A TRUE DESIGN SYSTEM
+============================================================
+
+Before redesigning individual screens, extract a complete design system from the supplied references.
+
+Create/update shared React Native tokens for:
+
+COLORS
+- Primary
+- Secondary
+- Navy shades if used
+- Gold shades if used
+- Background
+- Surface
+- Text
+- Muted text
+- Borders
+- Success
+- Warning
+- Danger
+- Disabled
+
+TYPOGRAPHY
+- Arabic headings
+- Arabic body
+- Labels
+- Small text
+- Numeric values
+- Section titles
+- Button text
+
+SPACING
+- 4
+- 8
+- 12
+- 16
+- 20
+- 24
+- 32
+or values derived from the visual references
+
+RADIUS
+
+ELEVATION / SHADOW
+
+ICON SIZES
+
+TOUCH TARGETS
+
+SCREEN GUTTERS
+
+SECTION SPACING
+
+Use shared tokens.
+
+Do NOT hardcode random styling independently inside every screen.
+
+============================================================
+5. ARABIC FONT
+============================================================
+
+The application is Arabic-first.
+
+Use a high-quality Arabic font that visually matches the supplied references as closely as practical.
+
+Prefer an Expo-compatible bundled font.
+
+Possible candidates include:
+
+- Noto Sans Arabic
+- Noto Kufi Arabic
+
+but inspect the references first and select the closer visual direction.
+
+Do NOT rely only on generic Android sans-serif if a better Arabic font can be bundled reliably.
+
+Typography must work on both:
+
+Android
+iOS
+
+============================================================
+6. RTL — MANDATORY
+============================================================
+
+Every screen must be naturally designed for Arabic RTL.
+
+Check:
+
+- text alignment
+- icons
+- arrows
+- navigation direction
+- input fields
+- cards
+- search
+- lists
+- forms
+- tabs
+- dates
+- phone numbers
+- currency
+- mixed Arabic / Latin strings
+
+Do not simply reverse an English layout.
+
+Arabic is the original design language.
+
+============================================================
+7. REUSABLE COMPONENTS
+============================================================
+
+Create or improve shared components based on the design references.
+
+Possible components:
+
+AppHeader
+ScreenHeader
+BottomNavigation
+SectionHeader
+PrimaryButton
+SecondaryButton
+IconButton
+SearchBar
+TextField
+SelectField
+DateField
+FilterChip
+StatusBadge
+MetricCard
+ClientCard
+MatterCard
+SessionCard
+DeadlineCard
+ActivityItem
+QuickAction
+EmptyState
+LoadingState
+ErrorState
+BottomSheet
+Modal
+FormSection
+Avatar
+OfficeHeader
+
+Reuse these consistently.
+
+Do not duplicate near-identical styles.
+
+============================================================
+8. CURRENT SCREENS TO REDESIGN
+============================================================
+
+Apply the official reference design to all screens already implemented.
+
+At minimum review and redesign:
+
+Splash
+
+Login
+
+Dashboard
+
+Client List
+
+Create Client
+
+Edit Client
+
+Client Profile
+
+Matter List
+
+Create Matter
+
+Bottom Navigation
+
+Any loading/error/empty states already implemented.
+
+Do NOT implement Batch 3 features during this task.
+
+============================================================
+9. SPLASH SCREEN
+============================================================
+
+Match the reference design as closely as possible.
+
+Use:
+
+- official Maktabi branding
+- correct proportions
+- appropriate background
+- professional legal identity
+
+Keep the screen clean.
+
+Do not invent unnecessary text or animation.
+
+============================================================
+10. LOGIN SCREEN
+============================================================
+
+Reproduce the reference layout closely.
+
+Pay attention to:
+
+- logo placement
+- vertical spacing
+- title hierarchy
+- fields
+- borders
+- icons
+- password visibility
+- remember-me
+- forgot-password
+- login button
+- lower visual area/background
+
+The result should feel almost identical in visual language to the reference while remaining a native React Native screen.
+
+============================================================
+11. DASHBOARD / HOME
+============================================================
+
+Use the reference dashboard as the primary visual model.
+
+Preserve useful information such as:
+
+- today's sessions
+- upcoming deadlines
+- active matters
+- financial alerts
+- recent activity
+- quick actions
+
+But present them according to the visual language and information hierarchy shown in the new references.
+
+Do not revert to generic dashboard cards.
+
+============================================================
+12. CLIENT LIST
+============================================================
+
+Apply the new visual style to:
+
+- page header
+- search
+- filters
+- client rows/cards
+- status/count information
+- add-client action
+
+The list must remain efficient with hundreds of clients.
+
+============================================================
+13. CLIENT FORM
+============================================================
+
+Redesign Create/Edit Client forms based on the official design system.
+
+Preserve existing fields and validation.
+
+Improve:
+
+- section grouping
+- labels
+- input appearance
+- field spacing
+- type selector
+- save button
+- keyboard behavior
+- error messages
+
+Do not turn the entire form into one visually overwhelming page.
+
+============================================================
+14. CLIENT PROFILE
+============================================================
+
+Redesign:
+
+- profile header
+- primary actions
+- navigation/tabs
+- matter summary
+- financial summary
+- receipts
+- documents
+- activity
+
+Keep financial concepts separate:
+
+Lawyer fees
+Client Trust
+Expenses
+
+Do not visually combine them into one misleading number.
+
+============================================================
+15. MATTER LIST
+============================================================
+
+Use the reference design for case/matter presentation.
+
+Each item should clearly expose:
+
+- Matter number
+- Matter type
+- Client
+- Opponent/party where appropriate
+- Authority/court
+- Current stage
+- Status
+- Next session/deadline
+
+Keep the cards readable.
+
+Avoid filling dark cards with too much text.
+
+============================================================
+16. CREATE MATTER
+============================================================
+
+Redesign the current multi-step Matter creation flow.
+
+The user must immediately understand:
+
+- current step
+- completed steps
+- next action
+- required information
+
+Make the wizard visually consistent with the references.
+
+Preserve existing dynamic Matter-type fields.
+
+============================================================
+17. BOTTOM NAVIGATION
+============================================================
+
+Preserve exactly these five destinations:
+
+الرئيسية
+الملفات
+التقويم
+العملاء
+المزيد
+
+Style the navigation based on the reference designs.
+
+Ensure:
+
+- clear active state
+- excellent Arabic labels
+- professional icons
+- proper safe-area behavior on iPhone
+- Android compatibility
+
+============================================================
+18. MOBILE QUALITY
+============================================================
+
+Test layouts on approximately:
+
+Small Android phone
+Standard Android phone
+Large Android phone
+Standard iPhone
+Modern iPhone with Dynamic Island / safe area
+
+Do not design only for one screenshot size.
+
+Avoid:
+
+- clipped Arabic text
+- elements hidden behind tab bar
+- keyboard covering fields
+- text overflowing cards
+- tiny touch targets
+
+============================================================
+19. NATIVE ONLY
+============================================================
+
+Inside apps/mobile do not use:
+
+div
+span
+button
+input
+section
+CSS files
+document
+window
+localStorage
+
+Use React Native components such as:
+
+View
+Text
+Pressable
+TextInput
+FlatList
+ScrollView
+Modal
+KeyboardAvoidingView
+SafeAreaView
+
+or proper Expo-compatible libraries.
+
+============================================================
+20. VISUAL COMPARISON
+============================================================
+
+After implementing each major screen:
+
+compare it visually against the supplied design reference.
+
+Evaluate:
+
+- hierarchy
+- spacing
+- colors
+- proportions
+- typography
+- icons
+- density
+- alignment
+
+Fix obvious mismatches before declaring the screen complete.
+
+Do not claim "close enough" after only implementing the same colors.
+
+The layout and component language matter just as much as the palette.
+
+============================================================
+21. FIVE-STEP DESIGN BATCH
+============================================================
+
+Work in exactly FIVE steps.
+
+STEP 1
+Inspect both visual references and create:
+
+docs/ui-visual-spec.md
+
+Document:
+
+- colors
+- typography
+- spacing
+- layout
+- components
+- navigation
+- design rules
+
+STEP 2
+Update the shared React Native design system and typography.
+
+STEP 3
+Redesign:
+
+Splash
+Login
+Bottom Navigation
+Dashboard
+
+STEP 4
+Redesign:
+
+Client List
+Create Client
+Edit Client
+Client Profile
+
+STEP 5
+Redesign:
+
+Matter List
+Create Matter
+
+Then STOP.
+
+Do NOT begin another batch.
+
+============================================================
+22. TESTING
+============================================================
+
+After implementation run:
+
+pnpm lint
+pnpm typecheck
+pnpm test
+
+Also verify Expo starts successfully.
+
+Use an alternate port if necessary.
+
+Check:
+
+Expo Web
+Android export/bundle
+RTL
+
+If SDK 57 upgrade has already been completed, preserve SDK 57.
+
+DO NOT downgrade Expo.
+
+If the project is still upgrading from SDK 54, finish the SDK compatibility work first before making large visual changes.
+
+============================================================
+23. SCREENSHOTS / REVIEW
+============================================================
+
+Where possible, produce screenshots or browser/mobile previews for:
+
+Splash
+Login
+Dashboard
+Client List
+Client Profile
+Matter List
+Create Matter
+
+The product owner needs to visually review the work.
+
+Do not hide behind code-only completion.
+
+============================================================
+24. GIT
+============================================================
+
+Do NOT work directly on main.
+
+Create/use a dedicated UI branch such as:
+
+claude/ui-visual-lock
+
+or another approved feature branch.
+
+Do not merge automatically.
+
+At completion create a PR into main.
+
+Wait for approval before merge.
+
+============================================================
+25. FINAL REPORT
+============================================================
+
+When done report:
+
+1. DESIGN REFERENCES
+Were both links successfully inspected?
+
+YES / NO
+
+2. VISUAL SPEC
+Summarize the design system extracted.
+
+3. SCREENS REDESIGNED
+List each screen.
+
+4. COMPONENTS CREATED / UPDATED
+
+5. RTL REVIEW
+
+6. TEST RESULTS
+
+Use only:
+
+PASS
+FAIL
+BLOCKED
+
+for:
+
+lint
+typecheck
+tests
+Expo start
+Expo Web
+Android export
+
+7. VISUAL DIFFERENCES
+
+List anything that could not exactly match the references and why.
+
+8. SCREENSHOTS / PREVIEW
+
+Explain how the product owner can review the new UI.
+
+9. GIT
+
+Branch
+Commit
+PR
+
+10. STOP
+
+Do not implement additional features.
+Wait for explicit approval.
+
+============================================================
+FINAL RULE
+============================================================
+
+These two reference designs define how MAKTABI should look.
+
+Do not independently redesign Maktabi.
+
+Do not make it look like generic AI-generated software.
+
+Do not replace the reference design with your personal interpretation.
+
+Translate the supplied design faithfully into a polished,
+native React Native + Expo mobile application.
+
+If the design references cannot be accessed:
+
+STOP AND REQUEST SCREENSHOTS.
+
+DO NOT GUESS.

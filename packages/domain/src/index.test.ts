@@ -16,4 +16,7 @@ describe('domain invariants', () => {
     const cancelled = cancelReceipt(receipt, '2026-09-25T10:00:00Z', 'صدر بالخطأ');
     expect(() => cancelReceipt(cancelled, '2026-09-26T10:00:00Z', 'مرة أخرى')).toThrow('RECEIPT_ALREADY_CANCELLED');
   });
+  it('requires a non-blank cancellation reason', () => {
+    expect(() => cancelReceipt(receipt, '2026-09-25T10:00:00Z', '   ')).toThrow('CANCELLATION_REASON_REQUIRED');
+  });
 });

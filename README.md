@@ -32,6 +32,9 @@ pnpm --filter @maktabi/mobile start
 
 ملف `apps/mobile/eas.json` يحتوي ملف تعريف `preview` مهيأ لإخراج APK داخلي، لكن لم يُنشأ APK في هذه الدفعة. يتطلب البناء لاحقاً حساب Expo/EAS وأمر `eas build --platform android --profile preview` بعد موافقة المالك.
 
-## الهوية
+## الهوية البصرية
+
+المرجع البصري المعتمد موثّق في `docs/ui-visual-spec.md`، وتُطبَّق رموزه من `packages/ui/src/theme.ts` (الألوان، الخط Noto Sans Arabic، المسافات، الظلال، ومساعدات الاتجاه `rtl`). لقطات المعاينة في `docs/screenshots/`.
+
 
 علامة الميزان الحالية **مؤقتة** وليست شعاراً نهائياً معتمداً. يجب استبدالها بملف الشعار الإنتاجي الذي يقدمه المالك.
