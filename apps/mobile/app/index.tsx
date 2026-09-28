@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, Emblem, gradients, HeroDecoration, spacing, type } from '@maktabi/ui';
+import { resolveInitialRoute } from '../src/lib/initialRoute';
 import { supabase } from '../src/lib/supabase';
 
 export default function SplashScreen() {
@@ -10,18 +11,12 @@ export default function SplashScreen() {
     let mounted = true;
 
     const routeFromSession = async () => {
-      let hasSession = false;
-      try {
-        const { data } = await supabase.auth.getSession();
-        hasSession = !!data.session;
-      } catch {
-        // An unreadable stored session must not leave the app stuck on the splash screen.
-      }
+      const route = await resolveInitialRoute(() => supabase.auth.getSession());
       if (!mounted) return;
 
       setTimeout(() => {
         if (!mounted) return;
-        router.replace(hasSession ? '/(tabs)' : '/login');
+        router.replace(route);
       }, 700);
     };
 
