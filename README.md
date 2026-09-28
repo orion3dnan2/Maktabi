@@ -424,7 +424,7 @@ pnpm --filter @maktabi/mobile start
 
 الدخول برقم الهاتف وكلمة المرور. الحسابات تُنشأ من داخل التطبيق فقط: مالك المنصة ← مدير المكتب ← فريق المكتب والموكلين. التفاصيل في [المرحلة 1 — الحسابات والصلاحيات](docs/phase-1-accounts.md).
 
-ملف `apps/mobile/.env` مطلوب لإعدادات Supabase؛ بدونه يتوقف التطبيق عند التشغيل برسالة `Missing Supabase environment variables`. بعد تعديله أعد تشغيل Metro.
+ملف `apps/mobile/.env` مطلوب لإعدادات Supabase؛ بدونه يتوقف التطبيق عند التشغيل برسالة `Missing Supabase environment variables`. بعد إنشائه أو تعديله أعد تشغيل Metro مع مسح الكاش: `pnpm --filter @maktabi/mobile exec expo start -c`؛ بدون `-c` قد يبقى Metro على القيم القديمة المحفوظة في الكاش.
 
 المتطلبات:
 - Node.js 22 LTS بإصدار 22.13.0 أو أحدث (مثبت في `.nvmrc`؛ `.npmrc` يفعّل `engine-strict` فيرفض `pnpm install` أي إصدار أقدم). `@supabase/supabase-js` يتطلب Node 22، و`vite`/`eslint` يتطلبان 22.13 على الأقل.
