@@ -14,8 +14,11 @@
 
 ```bash
 pnpm install
+cp apps/mobile/.env.example apps/mobile/.env   # Windows: copy apps\mobile\.env.example apps\mobile\.env
 pnpm --filter @maktabi/mobile start
 ```
+
+ملف `apps/mobile/.env` مطلوب لإعدادات Supabase؛ بدونه يتوقف التطبيق عند التشغيل برسالة `Missing Supabase environment variables`. بعد تعديله أعد تشغيل Metro.
 
 بعد بدء Metro استخدم `a` لمحاكي Android، أو `i` لمحاكي iOS على macOS، أو امسح رمز QR من Expo Go. للويب الثانوي استخدم `w`.
 

@@ -10,12 +10,18 @@ export default function SplashScreen() {
     let mounted = true;
 
     const routeFromSession = async () => {
-      const { data } = await supabase.auth.getSession();
+      let hasSession = false;
+      try {
+        const { data } = await supabase.auth.getSession();
+        hasSession = !!data.session;
+      } catch {
+        // An unreadable stored session must not leave the app stuck on the splash screen.
+      }
       if (!mounted) return;
 
       setTimeout(() => {
         if (!mounted) return;
-        router.replace(data.session ? '/(tabs)' : '/login');
+        router.replace(hasSession ? '/(tabs)' : '/login');
       }, 700);
     };
 
