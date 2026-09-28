@@ -421,7 +421,7 @@ pnpm --filter @maktabi/mobile start
 ملف `apps/mobile/.env` مطلوب لإعدادات Supabase؛ بدونه يتوقف التطبيق عند التشغيل برسالة `Missing Supabase environment variables`. بعد تعديله أعد تشغيل Metro.
 
 المتطلبات:
-- Node.js 20+
+- Node.js 22 LTS بإصدار 22.13.0 أو أحدث (مثبت في `.nvmrc`؛ `.npmrc` يفعّل `engine-strict` فيرفض `pnpm install` أي إصدار أقدم). `@supabase/supabase-js` يتطلب Node 22، و`vite`/`eslint` يتطلبان 22.13 على الأقل.
 - pnpm 10+
 - Expo Go المتوافق مع SDK 54 أو Android/iOS simulator
 
