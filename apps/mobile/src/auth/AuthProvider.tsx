@@ -81,7 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await openUserVault(current!.user_id, phone, password);
         resetRepositories();
       }
-      void supabase.rpc('log_login_success');
+      // PostgREST builders are lazy: without then() the request is never sent. Errors resolve, so this never rejects.
+      void supabase.rpc('log_login_success').then(() => undefined);
       setAccess(current); setStatus('ready');
     } catch (e) {
       await supabase.auth.signOut();
