@@ -39,18 +39,18 @@ export default function MatterDetailScreen() {
     if (!matter) throw new Error('القضية غير موجودة');
     const clientId = matter.parties.find((p) => p.isPrimary)?.clientId;
     const [workflow, snapshot] = await Promise.all([workflowRepository.getByMatter(id), dashboardRepository.getSnapshot()]);
-    return { matter, workflow, clientId, lawyer: snapshot.currentUser.fullName };
+    return { matter, workflow, clientId, lawyer: snapshot.currentUser.fullName, loadedAt: Date.now() };
   }, [id]);
   const { data, error, reload } = useResource(fetcher);
   const back = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/matters'));
   if (error) return <View style={styles.page}><ErrorState message={error} onRetry={reload}/><Button label="القضايا" onPress={back}/></View>;
   if (!data) return <View style={styles.page}><LoadingState/></View>;
-  const { matter: m, workflow, clientId, lawyer } = data;
+  const { matter: m, workflow, clientId, lawyer, loadedAt } = data;
   const badge = matterBadge(m);
   const client = m.parties.find((p) => p.isPrimary);
   const opponent = m.parties.find((p) => p.role === 'OPPONENT');
   const paid = paidTotal(workflow); const agreed = workflow.agreedFees; const pct = agreed ? Math.max(0, Math.min(100, Math.round((paid / agreed) * 100))) : 0;
-  const daysLeft = m.nextEventAt ? Math.max(0, Math.ceil((Date.parse(m.nextEventAt) - Date.now()) / 86400000)) : undefined;
+  const daysLeft = m.nextEventAt ? Math.max(0, Math.ceil((Date.parse(m.nextEventAt) - loadedAt) / 86400000)) : undefined;
   const docs = workflow.documents;
   const timeline: TimelineItem[] = [
     { id: 'open', time: slash(m.openedAt), title: 'فتح ملف القضية', subtitle: `تم تسجيل القضية لدى ${m.authority || 'المكتب'}`, icon: 'document-text-outline', pill: 'مكتمل', tone: 'gold' },

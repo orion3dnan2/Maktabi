@@ -12,11 +12,18 @@ export function useResource<T>(fetcher: () => Promise<T>) {
   const [loading, setLoading] = useState(true);
   const [revision, setRevision] = useState(0);
   const isFocused = useIsFocused();
+  // Reset while rendering, not in the effect, whenever the effect below is about to fetch again.
+  const [requested, setRequested] = useState({ fetcher, revision, isFocused });
+  if (requested.fetcher !== fetcher || requested.revision !== revision || requested.isFocused !== isFocused) {
+    setRequested({ fetcher, revision, isFocused });
+    if (isFocused) {
+      setLoading(true);
+      setError("");
+    }
+  }
   useEffect(() => {
     if (!isFocused) return;
     let active = true;
-    setLoading(true);
-    setError("");
     fetcher()
       .then((result) => {
         if (active) setData(result);

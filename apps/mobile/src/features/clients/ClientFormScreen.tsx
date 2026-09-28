@@ -46,12 +46,11 @@ export default function ClientFormScreen() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
-  useEffect(() => {
-    if (resource.data && !client) {
-      setClient(resource.data);
-      setOriginal(JSON.stringify(resource.data));
-    }
-  }, [resource.data, client]);
+  // Initialise the form once, while rendering, from the first loaded client.
+  if (resource.data && !client) {
+    setClient(resource.data);
+    setOriginal(JSON.stringify(resource.data));
+  }
   const { cancel, confirmation } = useUnsavedChanges(
     !saved && !!client && JSON.stringify(client) !== original,
   );

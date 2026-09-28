@@ -76,26 +76,25 @@ export default function MatterFormScreen() {
   const { cancel, confirmation } = useUnsavedChanges(
     !saved && (dirty || !!partyName.trim()),
   );
-  useEffect(() => {
-    if (resource.data && !initialized) {
-      const c = resource.data.find((c) => c.id === clientId);
-      if (c)
-        setMatter((m) => ({
-          ...m,
-          parties: [
-            {
-              id: newId(),
-              matterId: m.id,
-              clientId: c.id,
-              displayName: c.displayName,
-              role: "CLIENT",
-              isPrimary: true,
-            },
-          ],
-        }));
-      setInitialized(true);
-    }
-  }, [resource.data, clientId, initialized]);
+  // Preselect the client once, while rendering, when the client list first loads.
+  if (resource.data && !initialized) {
+    const c = resource.data.find((c) => c.id === clientId);
+    if (c)
+      setMatter((m) => ({
+        ...m,
+        parties: [
+          {
+            id: newId(),
+            matterId: m.id,
+            clientId: c.id,
+            displayName: c.displayName,
+            role: "CLIENT",
+            isPrimary: true,
+          },
+        ],
+      }));
+    setInitialized(true);
+  }
   useEffect(() => {
     if (saved) router.replace({ pathname: '/matters/[id]/workflow', params: { id: matter.id } });
   }, [saved, router, matter.id]);

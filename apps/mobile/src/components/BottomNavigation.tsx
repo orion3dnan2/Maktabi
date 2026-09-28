@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,7 +17,7 @@ export type TabName = keyof typeof tabs;
 
 export function BottomNavigation({ selected, onNavigate }: { selected: TabName; onNavigate: (name: TabName) => void }) {
   const insets = useSafeAreaInsets();
-  const scale = useRef(new Animated.Value(1)).current;
+  const [scale] = useState(() => new Animated.Value(1));
   const spring = (toValue: number) => Animated.spring(scale, { toValue, useNativeDriver: true, friction: 6, tension: 220 }).start();
   return <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
     <LinearGradient colors={gradients.navy} style={StyleSheet.absoluteFill}/>

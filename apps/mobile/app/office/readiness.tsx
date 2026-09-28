@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Text } from 'react-native';
 import { BodyText, Button, Card, ChoiceField, FormPage, Input, SectionHeader, featureStyles } from '@maktabi/ui';
@@ -13,7 +13,12 @@ export default function ReadinessScreen() {
   const [service, setService] = useState<ServiceKey>(params.service && Object.hasOwn(serviceRequirements, params.service) ? params.service : 'hosting');
   const resource = useResource(useCallback(() => officeRepository.listReadiness(), []));
   const [notes, setNotes] = useState(''); const [links, setLinks] = useState(''); const [documents, setDocuments] = useState<Attachment[]>([]); const [message, setMessage] = useState(''); const [busy, setBusy] = useState(false);
-  useEffect(() => { const saved = resource.data?.find((s) => s.service === service); setNotes(saved?.notes ?? ''); setLinks(saved?.links ?? ''); setDocuments(saved?.documents ?? []); setMessage(''); }, [resource.data, service]);
+  // Reload the form while rendering whenever the saved data or the selected service changes.
+  const [shown, setShown] = useState<{ data: typeof resource.data; service: ServiceKey }>();
+  if (!shown || shown.data !== resource.data || shown.service !== service) {
+    setShown({ data: resource.data, service });
+    const saved = resource.data?.find((s) => s.service === service); setNotes(saved?.notes ?? ''); setLinks(saved?.links ?? ''); setDocuments(saved?.documents ?? []); setMessage('');
+  }
   const run = async (action: () => Promise<void>) => { if (busy) return; setBusy(true); setMessage(''); try { await action(); } catch (e) { setMessage(e instanceof Error ? e.message : 'تعذر الحفظ'); } finally { setBusy(false); } };
   const item = serviceRequirements[service]; const saved = resource.data?.find((s) => s.service === service);
   return <FormPage title="متطلبات تفعيل مكتب المحامي"><Button label="العودة للمزيد" variant="secondary" onPress={() => router.replace('/(tabs)/more')}/>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Text } from 'react-native';
 import { BodyText, Button, Card, FormPage, Input, SectionHeader, featureStyles } from '@maktabi/ui';
@@ -11,7 +11,9 @@ import { ServiceNotice } from '@/components/ServiceNotice';
 export default function OfficeSettingsScreen() {
   const router = useRouter(); const resource = useResource(useCallback(() => officeRepository.getSettings(), []));
   const [settings, setSettings] = useState(defaultOffice().settings); const op = useOperation();
-  useEffect(() => { if (resource.data) setSettings(resource.data); }, [resource.data]);
+  // Take newly loaded settings while rendering instead of in an effect.
+  const [shown, setShown] = useState(resource.data);
+  if (resource.data && resource.data !== shown) { setShown(resource.data); setSettings(resource.data); }
   return <FormPage title="إعدادات المكتب"><Button label="العودة للمزيد" variant="secondary" onPress={() => router.replace('/(tabs)/more')}/><Card><SectionHeader title="بيانات المكتب والإيصالات"/>
     {Object.entries({ name: 'اسم المكتب', address: 'العنوان', phone: 'هاتف المكتب', receiver: 'اسم مستلم الدفعات', receiptPrefix: 'بادئة الإيصالات (حروف لاتينية / أرقام)' }).map(([key, label]) => <Input key={key} label={label} value={settings[key as 'name']} onChangeText={(value) => setSettings((s) => ({ ...s, [key]: value }))}/>)}
     <BodyText muted>يُرقّم كل إيصال تلقائياً حسب السنة مع الاحتفاظ بأرقام الإيصالات الملغاة.</BodyText>

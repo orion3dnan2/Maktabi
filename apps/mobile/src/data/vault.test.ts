@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const fixture = vi.hoisted(() => ({ store: new Map<string, string>(), fail: false }));
-vi.mock('@react-native-async-storage/async-storage', () => ({ default: { async getItem(key: string) { return fixture.store.get(key) ?? null; }, async setItem(key: string, value: string) { if (fixture.fail) throw new Error('disk full'); fixture.store.set(key, value); }, async removeItem(key: string) { fixture.store.delete(key); } } }));
-vi.mock('expo-crypto', () => ({ async getRandomBytesAsync(length: number) { return crypto.getRandomValues(new Uint8Array(length)); } }));
 import { createVault, encryptedBackup, hasVault, isUnlocked, lockVault, restoreEncryptedBackup, unlockVault, vaultStorage } from './vault';
 import { STORAGE_KEY } from './localRepositories';
 import { pbkdf2 } from '@noble/hashes/pbkdf2.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, encryptText, KDF_ITERATIONS } from './crypto';
+const fixture = vi.hoisted(() => ({ store: new Map<string, string>(), fail: false }));
+vi.mock('@react-native-async-storage/async-storage', () => ({ default: { async getItem(key: string) { return fixture.store.get(key) ?? null; }, async setItem(key: string, value: string) { if (fixture.fail) throw new Error('disk full'); fixture.store.set(key, value); }, async removeItem(key: string) { fixture.store.delete(key); } } }));
+vi.mock('expo-crypto', () => ({ async getRandomBytesAsync(length: number) { return crypto.getRandomValues(new Uint8Array(length)); } }));
 const phone = '+249000000999'; const password = 'Maktabi-test-passphrase';
 beforeEach(() => { lockVault(); fixture.store.clear(); fixture.fail = false; });
 describe('office vault lifecycle', () => {
