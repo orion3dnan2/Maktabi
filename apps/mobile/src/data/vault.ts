@@ -5,14 +5,18 @@ import { bytesToHex, decryptText, encryptText, hexToBytes, isValidIterations, KD
 import { STORAGE_KEY, type LocalStorage } from './localRepositories';
 import { defaultOffice } from './office';
 
-const VAULT_KEY = 'maktabi:vault:v1';
+const LEGACY_VAULT_KEY = 'maktabi:vault:v1';
+// Each signed-in office user gets their own encrypted workspace on the device,
+// unlocked with their login phone + password (until office data moves to Supabase).
+let VAULT_KEY = LEGACY_VAULT_KEY;
 interface Vault { version: 1; phone: string; salt: string; kdf?: { iterations: number }; wrappedKey: CipherEnvelope; data: CipherEnvelope }
 let unlocked: { key: Uint8Array; vault: Vault } | undefined;
 let operation = false; let failures = 0; let retryAt = 0;
 const normalizePhone = (phone: string) => normalizeArabic(phone).replace(/[\s()-]/g, '');
 export const hasVault = async () => !!(await AsyncStorage.getItem(VAULT_KEY));
 export const isUnlocked = () => !!unlocked;
-const checkPassword = (password: string) => { if (password.length < 12) throw new Error('اختر كلمة مرور لا تقل عن 12 حرفاً'); };
+export const MIN_PASSWORD_LENGTH = 10;
+const checkPassword = (password: string) => { if (password.length < MIN_PASSWORD_LENGTH) throw new Error(`اختر كلمة مرور لا تقل عن ${MIN_PASSWORD_LENGTH} أحرف`); };
 const iterationsOf = (vault: Vault) => vault.kdf === undefined ? LEGACY_KDF_ITERATIONS : vault.kdf.iterations;
 const validKdf = (vault: Vault) => vault.kdf === undefined || (typeof vault.kdf === 'object' && vault.kdf !== null && isValidIterations(vault.kdf.iterations));
 // Re-wrap the data key with the current KDF cost (e.g. vaults created with the old 600k setting). Best effort: login still succeeds if saving fails.
@@ -58,6 +62,18 @@ export async function unlockVault(phone: string, password: string) {
   } finally { operation = false; }
 }
 export function lockVault() { unlocked?.key.fill(0); unlocked = undefined; }
+/** Point the vault at a user's own workspace (null = legacy single-user key). Locks any open vault. */
+export function selectVaultUser(userId: string | null) { lockVault(); VAULT_KEY = userId ? `${LEGACY_VAULT_KEY}:${userId}` : LEGACY_VAULT_KEY; }
+/** Thrown when this device's workspace was encrypted with a different password (e.g. after an admin reset). */
+export class VaultPasswordMismatch extends Error { constructor() { super('بيانات هذا الجهاز مشفّرة بكلمة مرور سابقة لهذا الحساب.'); } }
+/** Opens (or creates on first sign-in) the signed-in user's workspace on this device. */
+export async function openUserVault(userId: string, phone: string, password: string) {
+  selectVaultUser(userId);
+  if (!(await hasVault())) { await createVault(phone, password); return; }
+  try { await unlockVault(phone, password); } catch (e) { if (e instanceof Error && e.message === 'رقم الهاتف أو كلمة المرور غير صحيحة') throw new VaultPasswordMismatch(); throw e; }
+}
+/** Deletes the selected user's workspace on this device (after explicit confirmation). */
+export async function discardUserVault() { lockVault(); await AsyncStorage.removeItem(VAULT_KEY); }
 export const vaultStorage: LocalStorage = {
   async getItem() { if (!unlocked) throw new Error('سجل الدخول لفتح بيانات المكتب'); return decryptText(unlocked.vault.data, unlocked.key) || null; },
   async setItem(_key, value) {

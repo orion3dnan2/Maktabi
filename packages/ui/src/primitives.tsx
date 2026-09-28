@@ -9,7 +9,7 @@ export function ScreenContainer({ children, scroll = true, style }: { children: 
   return <SafeAreaView style={styles.safe}>{scroll ? <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">{content}</ScrollView> : content}</SafeAreaView>;
 }
 export function Button({ label, onPress, variant = 'primary', disabled = false }: { label: string; onPress: () => void; variant?: 'primary' | 'secondary' | 'ghost'; disabled?: boolean }) {
-  return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.button, styles[`button_${variant}`], pressed && styles.pressed, disabled && styles.disabled]}><Text style={[styles.buttonLabel, variant === 'primary' ? styles.buttonLabelDark : styles.buttonLabelLight]}>{label}</Text></Pressable>;
+  return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.button, styles[`button_${variant}`], pressed && styles.pressed, disabled && styles.disabled]}><Text style={[styles.buttonLabel, variant === 'secondary' ? styles.buttonLabelLight : styles.buttonLabelDark]}>{label}</Text></Pressable>;
 }
 export function Input({ label, error, endAdornment, ...props }: TextInputProps & { label: string; error?: string; endAdornment?: ReactNode }) {
   return <View style={styles.field}><Text style={styles.label}>{label}</Text><View style={[styles.inputWrap, error && styles.inputError]}><TextInput {...props} accessibilityLabel={props.accessibilityLabel ?? label} placeholderTextColor={colors.muted} style={styles.input}/>{endAdornment}</View>{error ? <Text style={styles.error}>{error}</Text> : null}</View>;

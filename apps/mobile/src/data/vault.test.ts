@@ -41,3 +41,15 @@ describe('office vault lifecycle', () => {
     await expect(unlockVault(phone, password)).rejects.toThrow('ملف المكتب غير صالح');
   });
 });
+describe('per-user workspaces', () => {
+  it('keeps each signed-in user in their own vault and reports a changed password', async () => {
+    const { openUserVault, selectVaultUser, discardUserVault, VaultPasswordMismatch } = await import('./vault');
+    await openUserVault('user-a', phone, password); await vaultStorage.setItem('', JSON.stringify({ version: 1, clients: [{ id: 'a' }], matters: [] }));
+    await openUserVault('user-b', phone, 'Another-long-passphrase'); expect(await vaultStorage.getItem('')).not.toContain('"a"');
+    await openUserVault('user-a', phone, password); expect(await vaultStorage.getItem('')).toContain('"a"');
+    await expect(openUserVault('user-a', phone, 'Reset-by-admin-123')).rejects.toBeInstanceOf(VaultPasswordMismatch);
+    selectVaultUser('user-a'); await discardUserVault(); await openUserVault('user-a', phone, 'Reset-by-admin-123');
+    expect(JSON.parse((await vaultStorage.getItem(''))!).clients).toEqual([]);
+    selectVaultUser(null);
+  });
+});

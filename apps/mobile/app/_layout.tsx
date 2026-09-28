@@ -1,16 +1,28 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
-import { isUnlocked } from '@/data/vault';
 import { StatusBar } from 'expo-status-bar';
 import { I18nManager, View } from 'react-native';
 import { useFonts, Tajawal_400Regular, Tajawal_500Medium, Tajawal_700Bold, Tajawal_800ExtraBold } from '@expo-google-fonts/tajawal';
 import { colors } from '@maktabi/ui';
+import { AuthProvider, useAuth } from '@/auth/AuthProvider';
+import { canOpen, homeFor } from '@/auth/access';
 I18nManager.allowRTL(true);
 I18nManager.forceRTL(true);
+
+/** Sends every user to the part of the app their role allows. The server enforces the same rules (RLS). */
+function RouteGuard() {
+  const router = useRouter(); const segments = useSegments() as string[]; const { status, access } = useAuth();
+  useEffect(() => {
+    if (status === 'loading') return;
+    const inAuth = segments[0] === '(auth)';
+    if (status === 'signedOut' || !access) { if (!inAuth) router.replace('/login'); return; }
+    if (!canOpen(access, segments)) router.replace(homeFor(access));
+  }, [status, access, segments, router]);
+  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.canvas }, animation: 'fade' }}/>;
+}
+
 export default function RootLayout() {
-  const router = useRouter(); const segments = useSegments();
   const [loaded, fontError] = useFonts({ Tajawal_400Regular, Tajawal_500Medium, Tajawal_700Bold, Tajawal_800ExtraBold });
-  useEffect(() => { const [first, second] = segments as string[]; if ((loaded || fontError) && !isUnlocked() && first !== '(auth)' && !(first === 'office' && second === 'backup')) router.replace('/login'); }, [loaded, fontError, segments, router]);
   if (!loaded && !fontError) return <View style={{ flex: 1, backgroundColor: colors.navy950 }}/>;
-  return <><StatusBar style="light"/><Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.canvas }, animation: 'fade' }}/></>;
+  return <AuthProvider><StatusBar style="light"/><RouteGuard/></AuthProvider>;
 }
