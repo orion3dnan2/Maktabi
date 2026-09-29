@@ -29,12 +29,12 @@ describe('client mapping', () => {
     const row = clientToRow(client);
     expect(row).toEqual({
       id: C1, client_type: 'individual', full_name: 'أمجد', phone: '+249 900 000 101', whatsapp: '091234567', email: null, address: null,
-      contact_person: null, registration_number: null, notes: null, civil_id: '12345', id_type: 'national_id',
+      contact_person: null, registration_number: null, notes: null, civil_id: '12345', id_type: 'national_id', id_country: 'SD',
     });
     expect(row).not.toHaveProperty('office_id');
     expect(row).not.toHaveProperty('status');
-    expect(row).not.toHaveProperty('id_country');
-    expect(clientToRow({ ...client, nationalId: '' })).toMatchObject({ civil_id: null, id_type: null });
+    expect(clientToRow({ ...client, nationalId: '' })).toMatchObject({ civil_id: null, id_type: null, id_country: null });
+    expect(clientToRow({ ...client, nationalId: '١٢٣ ٤٥٦ ۷۸۹' })).toMatchObject({ civil_id: '123456789', id_type: 'national_id', id_country: 'SD' });
     expect(asciiDigits('٠١٢٣٤٥٦٧٨٩ ۰۱۲۳۴۵۶۷۸۹')).toBe('0123456789 0123456789');
   });
 });

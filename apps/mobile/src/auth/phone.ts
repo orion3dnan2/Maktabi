@@ -8,8 +8,8 @@ const EASTERN_DIGITS = /[٠-٩۰-۹]/g;
 
 /**
  * Returns the number in E.164 form (+ and 10–15 digits) or null.
- * Local shortcuts: 0XXXXXXXXX (10 digits) and 9-digit numbers are Sudan (+249);
- * 8-digit numbers are Kuwait (+965). Anything else must include its country code.
+ * Local numbers are Sudanese: 0XXXXXXXXX (10 digits) or 9 digits become +249.
+ * Anything else must include its country code (+ or 00).
  */
 export function normalizePhone(input: string): string | null {
   const ascii = input.trim().replace(EASTERN_DIGITS, (d) => String((d.charCodeAt(0) & 0xf) % 10));
@@ -20,7 +20,6 @@ export function normalizePhone(input: string): string | null {
     if (digits.startsWith('00')) digits = digits.slice(2);
     else if (digits.length === 10 && digits.startsWith('0')) digits = `249${digits.slice(1)}`;
     else if (digits.length === 9) digits = `249${digits}`;
-    else if (digits.length === 8) digits = `965${digits}`;
   }
   return /^[1-9]\d{9,14}$/.test(digits) ? `+${digits}` : null;
 }

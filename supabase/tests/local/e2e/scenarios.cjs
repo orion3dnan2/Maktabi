@@ -237,12 +237,16 @@ async function scenario(name, context, steps) {
     return { officeBClients: sql(`select c.full_name || '@' || o.name from clients c join offices o on o.id = c.office_id where o.name = 'Office B'`) };
   });
 
-  await scenario('12. a duplicate national number in the same office shows an Arabic error', deviceA, async (page) => {
+  await scenario('12. national number: letters refused, a duplicate in the same office shows an Arabic error', deviceA, async (page) => {
     await login(page, 'adminA');
     await nav(page, `/clients/new`);
     await field(page, 'الاسم الكامل *').fill('عميل مكرر');
     await field(page, 'رقم الهاتف *').fill('+249914000001');
     await field(page, 'رقم واتساب *').fill('+249914000001');
+    // The Sudanese national number is digits only.
+    await field(page, 'الرقم الوطني (اختياري)').fill('AB-123');
+    await button(page, 'حفظ العميل').click();
+    await text(page, 'الرقم الوطني أرقام فقط').waitFor({ timeout: 20000 });
     await field(page, 'الرقم الوطني (اختياري)').fill('1234567');
     await button(page, 'حفظ العميل').click();
     await text(page, 'رقم الهوية مسجل لعميل آخر في هذا المكتب.').waitFor({ timeout: 20000 });

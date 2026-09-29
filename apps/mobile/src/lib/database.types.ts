@@ -1,5 +1,5 @@
 // Generated from the live Supabase schema (project ngckrfvsjggpnaddivyq) with the Supabase
-// type generator after migration 20260929081219_phase2_clients_matters. Do not edit by hand:
+// type generator after migration 20260929093954_sudan_only_defaults. Do not edit by hand:
 // regenerate after every migration.
 export type Json =
   | string
@@ -890,7 +890,7 @@ export type Database = {
       payment_method:
         | "cash"
         | "bank_transfer"
-        | "knet"
+        | "bankak"
         | "card"
         | "cheque"
         | "other"
@@ -1091,7 +1091,7 @@ export const Constants = {
       payment_method: [
         "cash",
         "bank_transfer",
-        "knet",
+        "bankak",
         "card",
         "cheque",
         "other",
