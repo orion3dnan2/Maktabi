@@ -49,7 +49,7 @@ const optionalText = (body: Body, key: string, max = 200): string | null => {
 };
 const phone = (body: Body, key: string): string => {
   const value = normalizePhone(typeof body[key] === 'string' ? (body[key] as string) : '');
-  if (!value) throw new HttpError(400, 'validation', 'رقم الهاتف غير صحيح؛ أدخله مع رمز الدولة');
+  if (!value) throw new HttpError(400, 'validation', 'رقم الهاتف غير صحيح؛ أدخل رقم هاتف سودانياً');
   return value;
 };
 const password = (body: Body, key = 'password'): string => {
@@ -128,10 +128,12 @@ async function handle(req: Request, body: Body): Promise<Record<string, unknown>
       const actor = await callerId(req);
       if (!(await actorInfo(actor)).platform_admin) throw new HttpError(403, 'forbidden', 'هذه العملية لمالك المنصة فقط');
       const officeName = text(body, 'office_name', 'اسم المكتب'); const adminName = text(body, 'admin_name', 'اسم مدير المكتب');
-      const e164 = phone(body, 'admin_phone'); const officePhone = optionalText(body, 'office_phone', 30);
+      const e164 = phone(body, 'admin_phone'); const officePhoneInput = optionalText(body, 'office_phone', 30);
+      const officePhone = officePhoneInput ? normalizePhone(officePhoneInput) : null;
+      if (officePhoneInput && !officePhone) throw new HttpError(400, 'validation', 'هاتف المكتب غير صحيح؛ أدخل رقم هاتف سودانياً');
       const { userId, result } = await withNewUser(e164, password(body, 'admin_password'), adminName, (id) => rpc<string>('svc_create_office', {
         p_actor: actor, p_admin: id, p_admin_name: adminName, p_admin_phone: e164,
-        p_name: officeName, p_name_ar: optionalText(body, 'office_name_ar'), p_phone: officePhone ? normalizePhone(officePhone) ?? officePhone : null,
+        p_name: officeName, p_name_ar: optionalText(body, 'office_name_ar'), p_phone: officePhone,
       }));
       return { office_id: result, admin_user_id: userId, admin_phone: e164 };
     }

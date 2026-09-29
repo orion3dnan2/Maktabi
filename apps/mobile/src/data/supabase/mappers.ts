@@ -1,4 +1,4 @@
-import type { Client, ClientStatus, Matter, MatterParty, MatterStatus, MatterType } from '@maktabi/domain';
+import { normalizePhone, type Client, type ClientStatus, type Matter, type MatterParty, type MatterStatus, type MatterType } from '@maktabi/domain';
 import type { Database, Json } from '@/lib/database.types';
 import { isUuid } from '../ids';
 
@@ -33,7 +33,8 @@ export const asciiDigits = (value: string) =>
   value.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660)).replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
 
 const text = (value: string | undefined) => { const trimmed = value?.trim(); return trimmed ? trimmed : null; };
-const phone = (value: string | undefined) => { const trimmed = text(value); return trimmed ? asciiDigits(trimmed).replace(/\s+/g, ' ') : null; };
+// Stored as E.164 (+249 and 9 digits); anything else is left as typed so the database check rejects it.
+const phone = (value: string | undefined) => { const trimmed = text(value); return trimmed ? normalizePhone(trimmed) ?? trimmed : null; };
 const optional = (value: string | null) => value ?? undefined;
 
 export function clientFromRow(row: ClientRow): Client {
@@ -59,11 +60,11 @@ export function clientFromRow(row: ClientRow): Client {
 /**
  * Columns the app writes. office_id, status, created_by and timestamps are never sent:
  * the office comes from the session (column default + RLS) and status changes go through setStatus.
- * The national number is stored as id_type 'national_id' with no country, so no national format
- * (such as the Kuwait civil-ID rule) is assumed; choosing a country/format is a product decision.
+ * The national number is the Sudanese national number: id_type 'national_id', id_country 'SD',
+ * digits only (the database checks this too).
  */
 export function clientToRow(client: Client): ClientWrite & { id: string } {
-  const nationalId = text(client.nationalId && asciiDigits(client.nationalId));
+  const nationalId = text(client.nationalId && asciiDigits(client.nationalId).replace(/\s+/g, ''));
   return {
     id: client.id,
     client_type: clientKinds[client.kind],
@@ -77,6 +78,7 @@ export function clientToRow(client: Client): ClientWrite & { id: string } {
     notes: text(client.notes),
     civil_id: nationalId,
     id_type: nationalId ? 'national_id' : null,
+    id_country: nationalId ? 'SD' : null,
   };
 }
 

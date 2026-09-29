@@ -10,7 +10,7 @@ const P2 = '55555555-5555-4555-8555-555555555555';
 const L1 = '66666666-6666-4666-8666-666666666666';
 
 const clientRow: ClientRow = {
-  id: C1, office_id: 'office', client_type: 'organization', full_name: 'شركة الاختبار', phone: '+249 900 000 101', whatsapp: null,
+  id: C1, office_id: 'office', client_type: 'organization', full_name: 'شركة الاختبار', phone: '+249900000101', whatsapp: null,
   contact_person: 'سلمى', registration_number: 'REG-1', address: 'الخرطوم', notes: null, email: 'a@example.test', civil_id: null,
   id_type: null, id_country: null, nationality: null, secondary_phone: null, status: 'archived', metadata: {},
   created_at: '2026-09-29T10:00:00Z', created_by: null, updated_at: '2026-09-29T10:00:00Z',
@@ -19,22 +19,22 @@ const clientRow: ClientRow = {
 describe('client mapping', () => {
   it('reads a row into the domain model', () => {
     expect(clientFromRow(clientRow)).toEqual({
-      id: C1, officeId: 'office', displayName: 'شركة الاختبار', kind: 'ORGANIZATION', phone: '+249 900 000 101', whatsapp: undefined,
+      id: C1, officeId: 'office', displayName: 'شركة الاختبار', kind: 'ORGANIZATION', phone: '+249900000101', whatsapp: undefined,
       contactPerson: 'سلمى', registration: 'REG-1', address: 'الخرطوم', notes: undefined, email: 'a@example.test', nationalId: undefined,
       status: 'ARCHIVED', createdAt: '2026-09-29T10:00:00Z',
     });
   });
-  it('writes only app-owned columns, with ASCII digits and no office or status', () => {
-    const client: Client = { id: C1, officeId: 'ignored', kind: 'PERSON', displayName: '  أمجد  ', phone: '+٢٤٩ ٩٠٠\t٠٠٠ ١٠١', whatsapp: '۰۹۱۲۳۴۵۶۷', nationalId: ' ١٢٣٤٥ ', email: '', notes: ' ', createdAt: 'x', status: 'ARCHIVED' };
+  it('writes only app-owned columns, phones in Sudanese E.164, and no office or status', () => {
+    const client: Client = { id: C1, officeId: 'ignored', kind: 'PERSON', displayName: '  أمجد  ', phone: '+٢٤٩ ٩٠٠\t٠٠٠ ١٠١', whatsapp: '۰۹۱۲۳۴۵۶۷۸', nationalId: ' ١٢٣٤٥ ', email: '', notes: ' ', createdAt: 'x', status: 'ARCHIVED' };
     const row = clientToRow(client);
     expect(row).toEqual({
-      id: C1, client_type: 'individual', full_name: 'أمجد', phone: '+249 900 000 101', whatsapp: '091234567', email: null, address: null,
-      contact_person: null, registration_number: null, notes: null, civil_id: '12345', id_type: 'national_id',
+      id: C1, client_type: 'individual', full_name: 'أمجد', phone: '+249900000101', whatsapp: '+249912345678', email: null, address: null,
+      contact_person: null, registration_number: null, notes: null, civil_id: '12345', id_type: 'national_id', id_country: 'SD',
     });
     expect(row).not.toHaveProperty('office_id');
     expect(row).not.toHaveProperty('status');
-    expect(row).not.toHaveProperty('id_country');
-    expect(clientToRow({ ...client, nationalId: '' })).toMatchObject({ civil_id: null, id_type: null });
+    expect(clientToRow({ ...client, nationalId: '' })).toMatchObject({ civil_id: null, id_type: null, id_country: null });
+    expect(clientToRow({ ...client, nationalId: '١٢٣ ٤٥٦ ۷۸۹' })).toMatchObject({ civil_id: '123456789', id_type: 'national_id', id_country: 'SD' });
     expect(asciiDigits('٠١٢٣٤٥٦٧٨٩ ۰۱۲۳۴۵۶۷۸۹')).toBe('0123456789 0123456789');
   });
 });

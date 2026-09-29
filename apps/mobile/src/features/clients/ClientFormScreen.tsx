@@ -155,7 +155,9 @@ export default function ClientFormScreen() {
           keyboardType={
             key === "phone" || key === "whatsapp"
               ? "phone-pad"
-              : key === "email"
+              : key === "nationalId"
+                ? "number-pad"
+                : key === "email"
                 ? "email-address"
                 : "default"
           }

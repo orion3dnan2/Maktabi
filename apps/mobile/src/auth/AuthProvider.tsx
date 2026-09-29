@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const doSignIn = useCallback(async (phoneInput: string, password: string, discardLocal: boolean) => {
     const phone = normalizePhone(phoneInput);
-    if (!phone) throw new Error('رقم الهاتف غير صحيح؛ أدخله مع رمز الدولة');
+    if (!phone) throw new Error('رقم الهاتف غير صحيح؛ أدخل رقم هاتف سودانياً');
     if (!password) throw new Error('أدخل كلمة المرور');
     const { data, error } = await supabase.auth.signInWithPassword({ email: phoneLoginEmail(phone), password });
     if (error || !data.user) throw new Error(authMessage(error?.message ?? ''));

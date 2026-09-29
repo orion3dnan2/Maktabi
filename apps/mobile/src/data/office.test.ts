@@ -84,6 +84,14 @@ describe('office procedures and accounting', () => {
   it('refuses procedures that do not fit the server-side matter type', async () => {
     const { r } = fixture(); await expect(r.officeRepository.appendProcedure('m6', 'criminal')).rejects.toThrow('اختر مساراً مناسباً');
   });
+  it('keeps the office phone Sudanese and in one format', async () => {
+    const { r } = fixture(); const settings = await r.officeRepository.getSettings();
+    await expect(r.officeRepository.saveSettings({ ...settings, phone: '+965 5132 5559' })).rejects.toThrow('سودانياً');
+    await r.officeRepository.saveSettings({ ...settings, phone: '٠٩١٢ ٣٤٥ ٦٧٨' });
+    expect((await r.officeRepository.getSettings()).phone).toBe('+249912345678');
+    await r.officeRepository.saveSettings({ ...settings, phone: '' });
+    expect((await r.officeRepository.getSettings()).phone).toBe('');
+  });
   it('stores office prerequisites without falsely marking external services active', async () => {
     const { r, reload } = fixture(); await r.officeRepository.submitReadiness({ service: 'library', notes: 'مصادر للمراجعة', links: 'https://example.test/laws', documents: [], submittedAt: '' });
     const list = await reload().officeRepository.listReadiness(); expect(list[0]?.service).toBe('library'); expect(list[0]).not.toHaveProperty('active');
