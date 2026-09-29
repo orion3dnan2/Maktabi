@@ -1,4 +1,4 @@
-import { useCallback, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -9,8 +9,8 @@ import { Button, colors, ErrorState, gradients, layout, LoadingState, typography
 import { Avatar, Chevron, HeroBackdrop, IconBubble, LuxeCard, Pill, RoundIconButton, row, rtl, SectionTitle, Timeline, type IonName, type McName, type TimelineItem } from '@/components/luxe';
 import { matterRepository, workflowRepository } from '@/data/repositories';
 import { paidTotal } from '@/data/workflow';
-import { dashboardRepository } from '@/data/mockDashboardRepository';
 import { money, useResource } from '../shared/hooks';
+import { useOperation } from '../shared/useOperation';
 import { matterBadge } from './MatterListScreen';
 import { BottomNavigation } from '@/components/BottomNavigation';
 
@@ -38,14 +38,17 @@ export default function MatterDetailScreen() {
     const matter = await matterRepository.getById(id);
     if (!matter) throw new Error('القضية غير موجودة');
     const clientId = matter.parties.find((p) => p.isPrimary)?.clientId;
-    const [workflow, snapshot] = await Promise.all([workflowRepository.getByMatter(id), dashboardRepository.getSnapshot()]);
-    return { matter, workflow, clientId, lawyer: snapshot.currentUser.fullName, loadedAt: Date.now() };
+    const workflow = await workflowRepository.getByMatter(id);
+    return { matter, workflow, clientId, loadedAt: Date.now() };
   }, [id]);
   const { data, error, reload } = useResource(fetcher);
+  const op = useOperation(reload);
+  const [archiving, setArchiving] = useState(false);
   const back = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/matters'));
   if (error) return <View style={styles.page}><ErrorState message={error} onRetry={reload}/><Button label="القضايا" onPress={back}/></View>;
   if (!data) return <View style={styles.page}><LoadingState/></View>;
-  const { matter: m, workflow, clientId, lawyer, loadedAt } = data;
+  const { matter: m, workflow, clientId, loadedAt } = data;
+  const edit = () => router.push({ pathname: '/matters/[id]/edit', params: { id } });
   const badge = matterBadge(m);
   const client = m.parties.find((p) => p.isPrimary);
   const opponent = m.parties.find((p) => p.role === 'OPPONENT');
@@ -67,7 +70,7 @@ export default function MatterDetailScreen() {
           <View style={[styles.nav, { flexDirection: row }]}>
             <RoundIconButton icon="chevron-forward" label="رجوع" bordered onPress={back}/>
             <Text style={styles.navTitle}>تفاصيل القضية</Text>
-            <RoundIconButton icon="ellipsis-horizontal" label="خيارات" onPress={() => Alert.alert('خيارات القضية', 'التعديل والأرشفة ستتوفر في دفعة لاحقة.')}/>
+            <RoundIconButton icon="create-outline" label="تعديل بيانات القضية" onPress={edit}/>
           </View>
           <View style={[styles.headline, { flexDirection: row }]}>
             <View style={styles.docTile}><LinearGradient colors={['#1C3358', '#0B1A30']} style={[StyleSheet.absoluteFill, { borderRadius: 16 }]}/><Ionicons name="document-text-outline" size={34} color={colors.gold500}/></View>
@@ -79,6 +82,12 @@ export default function MatterDetailScreen() {
       </HeroBackdrop>
       <View style={styles.sheet}>
         <Button label="إدارة مسار القضية" onPress={() => router.push({ pathname: '/matters/[id]/workflow', params: { id } })}/>
+        {m.status !== 'ARCHIVED' ? <Button label="تعديل بيانات القضية" variant="secondary" onPress={edit}/> : null}
+        {m.status === 'CLOSED' ? (archiving
+          ? <LuxeCard><Text style={styles.body}>الأرشفة تخفي القضية من القوائم النشطة وتحتفظ بكل بياناتها، ويمكن استعادتها لاحقاً.</Text><Button disabled={op.busy} label="تأكيد أرشفة القضية" onPress={() => void op.run(async () => { await matterRepository.setStatus(id, 'ARCHIVED'); setArchiving(false); }, 'تمت أرشفة القضية')}/><Button label="إلغاء" variant="secondary" onPress={() => setArchiving(false)}/></LuxeCard>
+          : <Button label="أرشفة القضية" variant="secondary" onPress={() => setArchiving(true)}/>) : null}
+        {m.status === 'ARCHIVED' ? <Button disabled={op.busy} label="استعادة القضية من الأرشيف" variant="secondary" onPress={() => void op.run(() => matterRepository.setStatus(id, 'CLOSED'), 'تمت استعادة القضية كقضية مغلقة')}/> : null}
+        {op.error || op.message ? <Text accessibilityLiveRegion="polite" style={[styles.body, op.error ? styles.error : null]}>{op.error || op.message}</Text> : null}
         <LuxeCard>
           <View style={[styles.overview, { flexDirection: row }]}>
             <View style={styles.flex1}>
@@ -95,7 +104,7 @@ export default function MatterDetailScreen() {
           <Tile icon="people" title="بيانات العميل" action="عرض الملف" onAction={openClient}><Party name={client?.displayName ?? 'غير محدد'} role="العميل الأساسي"/></Tile>
           <Tile icon="people-outline" title="الخصم"><Party name={opponent?.displayName ?? 'غير مسجل بعد'} role="الجهة المدعى عليها"/></Tile>
           <Tile icon="bank" mc title="معلومات المحكمة" action="عرض التفاصيل" onAction={() => Alert.alert('معلومات المحكمة', m.authority || 'الجهة غير مسجلة')}><View style={[styles.party, { flexDirection: row }]}><View style={styles.flex1}><Text numberOfLines={2} style={styles.partyName}>{m.authority || 'غير مسجلة'}</Text><Text style={styles.partyRole}>{matterTypes[m.type]}</Text></View><MaterialCommunityIcons name="bank" size={30} color={colors.gold600}/></View></Tile>
-          <Tile icon="person" title="المحامي المسؤول"><Party name={`أ. ${lawyer}`} role="محامي رئيسي" avatar/></Tile>
+          <Tile icon="person" title="المحامي المسؤول"><Party name={m.assignedLawyerName ? `أ. ${m.assignedLawyerName}` : 'غير مُسند بعد'} role="المحامي المسؤول" avatar/></Tile>
           <Tile icon="document-text" title="المستندات">
             <View style={[styles.docs, { flexDirection: row }]}>
               <View style={[styles.fileIcons, { flexDirection: row }]}>
@@ -118,7 +127,7 @@ export default function MatterDetailScreen() {
           <SectionTitle icon="time-outline" title="تسلسل القضية"/>
           <Timeline items={timeline}/>
         </LuxeCard>
-        <Text style={styles.disclaimer}>بيانات خيالية لأغراض العرض فقط.</Text>
+        <Text style={styles.disclaimer}>بيانات القضية وأطرافها من خادم المكتب. المستندات والأتعاب والمواعيد والملاحظات من هذا الجهاز فقط ولا تتم مزامنتها بعد.</Text>
       </View>
     </ScrollView>
     <BottomNavigation selected="matters" onNavigate={(name) => router.replace(name === 'index' ? '/(tabs)' : `/(tabs)/${name}`)}/>
@@ -165,6 +174,7 @@ const styles = StyleSheet.create({
   pct: { color: colors.gold700, fontFamily: typography.bold, fontSize: 14 },
   dot: { width: 10, height: 10, borderRadius: 5 },
   disclaimer: { ...rtl, textAlign: 'center', color: colors.muted, fontFamily: typography.regular, fontSize: 11 },
+  error: { color: colors.danger },
 });
 
 

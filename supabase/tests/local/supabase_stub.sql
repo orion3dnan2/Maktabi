@@ -3,10 +3,13 @@
 -- Not a full Supabase: only roles, auth.users/auth.uid(), storage buckets/objects and the
 -- default privileges Supabase grants on the public schema.
 
-create role anon nologin noinherit;
-create role authenticated nologin noinherit;
-create role service_role nologin noinherit bypassrls;
-create role authenticator login noinherit;
+-- Roles are cluster-wide, so a second database on the same server reuses them.
+do $$ begin
+  if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon nologin noinherit; end if;
+  if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated nologin noinherit; end if;
+  if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role nologin noinherit bypassrls; end if;
+  if not exists (select 1 from pg_roles where rolname = 'authenticator') then create role authenticator login noinherit; end if;
+end $$;
 grant anon, authenticated, service_role to authenticator;
 
 -- Supabase grants every API role access to public objects by default; migrations then revoke.
