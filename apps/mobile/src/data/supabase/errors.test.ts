@@ -21,6 +21,7 @@ describe('Arabic error mapping', () => {
     [pg('23514', 'matters can only be assigned to an active lawyer or admin of the office'), 'invalid', 'اختر محامياً أو مديراً نشطاً في المكتب.'],
     [pg('23514', 'new row for relation "clients" violates check constraint "clients_whatsapp_check"'), 'invalid', 'رقم الهاتف غير صحيح.'],
     [pg('23514', 'new row for relation "clients" violates check constraint "clients_identity_complete"'), 'invalid', 'رقم الهوية غير صحيح.'],
+    [pg('23514', 'new row for relation "clients" violates check constraint "clients_national_id_digits"'), 'invalid', 'الرقم الوطني أرقام فقط.'],
     [pg('22P02', 'invalid input syntax for type uuid: "x"'), 'invalid', 'صيغة البيانات غير صحيحة.'],
     [pg('P0002', 'matter not found'), 'not_found', messages.notFound],
     [pg('PGRST116', 'JSON object requested, multiple (or no) rows returned'), 'not_found', messages.notFound],

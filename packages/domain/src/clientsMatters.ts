@@ -108,10 +108,15 @@ export function validateClient(c: Client): FieldErrors {
   }
   if (c.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email))
     e.email = "البريد الإلكتروني غير صحيح";
-  // Mirrors the database rule for identity numbers (clients_identity_complete).
-  const nationalId = c.nationalId?.trim() ?? "";
-  if (nationalId && (nationalId.length < 3 || nationalId.length > 50))
-    e.nationalId = "الرقم الوطني من 3 إلى 50 حرفاً";
+  // The Sudanese national number is digits only; mirrors the database rules
+  // clients_national_id_digits and clients_identity_complete (3 to 50 characters).
+  const nationalId = normalizeArabic(c.nationalId ?? "")
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/\s+/g, "");
+  if (nationalId && !/^[0-9]+$/.test(nationalId))
+    e.nationalId = "الرقم الوطني أرقام فقط";
+  else if (nationalId && (nationalId.length < 3 || nationalId.length > 50))
+    e.nationalId = "الرقم الوطني من 3 إلى 50 رقماً";
   if (c.kind === "ORGANIZATION")
     for (const key of ["contactPerson", "email", "address"] as const)
       if (!c[key]?.trim()) e[key] = "هذا الحقل مطلوب للشركة";

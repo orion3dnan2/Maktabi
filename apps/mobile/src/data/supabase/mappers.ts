@@ -59,11 +59,11 @@ export function clientFromRow(row: ClientRow): Client {
 /**
  * Columns the app writes. office_id, status, created_by and timestamps are never sent:
  * the office comes from the session (column default + RLS) and status changes go through setStatus.
- * The national number is stored as id_type 'national_id' with no country, so no national format
- * (such as the Kuwait civil-ID rule) is assumed; choosing a country/format is a product decision.
+ * The national number is the Sudanese national number: id_type 'national_id', id_country 'SD',
+ * digits only (the database checks this too).
  */
 export function clientToRow(client: Client): ClientWrite & { id: string } {
-  const nationalId = text(client.nationalId && asciiDigits(client.nationalId));
+  const nationalId = text(client.nationalId && asciiDigits(client.nationalId).replace(/\s+/g, ''));
   return {
     id: client.id,
     client_type: clientKinds[client.kind],
@@ -77,6 +77,7 @@ export function clientToRow(client: Client): ClientWrite & { id: string } {
     notes: text(client.notes),
     civil_id: nationalId,
     id_type: nationalId ? 'national_id' : null,
+    id_country: nationalId ? 'SD' : null,
   };
 }
 

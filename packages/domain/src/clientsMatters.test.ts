@@ -251,11 +251,15 @@ describe("matter filtering and ordering", () => {
   });
 });
 describe("limits shared with the database", () => {
-  it("accepts a national number of 3 to 50 characters, like clients_identity_complete", () => {
-    expect(validateClient({ ...client, nationalId: "123" })).toEqual({});
-    expect(validateClient({ ...client, nationalId: "12" }).nationalId).toBeTruthy();
-    expect(validateClient({ ...client, nationalId: "x".repeat(51) }).nationalId).toBeTruthy();
+  it("accepts a Sudanese national number of 3 to 50 digits only", () => {
+    expect(validateClient({ ...client, nationalId: "12345678901" })).toEqual({});
+    expect(validateClient({ ...client, nationalId: "١٢٣ ٤٥٦" })).toEqual({});
+    expect(validateClient({ ...client, nationalId: "۱۲۳۴" })).toEqual({});
     expect(validateClient({ ...client, nationalId: "  " })).toEqual({});
+    expect(validateClient({ ...client, nationalId: "12" }).nationalId).toBe("الرقم الوطني من 3 إلى 50 رقماً");
+    expect(validateClient({ ...client, nationalId: "1".repeat(51) }).nationalId).toBeTruthy();
+    for (const bad of ["AB123", "123-456", "12.345"])
+      expect(validateClient({ ...client, nationalId: bad }).nationalId).toBe("الرقم الوطني أرقام فقط");
   });
   it("limits the matter reference to 50 characters, like matters.matter_number", () => {
     expect(validateMatter({ ...matter, reference: "x".repeat(50) })).toEqual({});
