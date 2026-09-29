@@ -31,7 +31,7 @@ export default function MatterWorkflowScreen() {
     <Button label="تفاصيل القضية" variant="secondary" onPress={() => router.replace({ pathname: '/matters/[id]', params: { id } })}/>
     <Card><Text style={s.title}>{m.reference} · {m.title}</Text><BodyText>العميل: {client?.displayName}</BodyText><BodyText>{closed ? 'القضية مغلقة' : `${stages.filter((s) => s.done).length} / ${stages.length} مراحل مسجلة`}</BodyText>
       <BodyText>✓ تسجيل العميل · ✓ إنشاء القضية</BodyText>{stages.map((stage) => <BodyText key={stage.label}>{stage.done ? '✓' : '○'} {stage.label}</BodyText>)}
-      <BodyText muted>تُحفظ العمليات والمرفقات محلياً على هذا الجهاز.</BodyText>
+      <BodyText muted>تُحفظ العمليات والمرفقات مشفرة على هذا الجهاز فقط ولا تتم مزامنتها بعد؛ بيانات القضية نفسها على خادم المكتب.</BodyText>
     </Card>
     <ChoiceField label="مرحلة العمل" value={section} options={sections} onChange={(value) => { setSection(value); setMessage(''); setFailure(''); }}/>
     {failure ? <Text accessibilityRole="alert" style={s.error}>{failure}</Text> : null}

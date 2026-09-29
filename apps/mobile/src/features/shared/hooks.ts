@@ -1,6 +1,7 @@
 import { createElement, useEffect, useState } from "react";
 import { useNavigation, useRouter } from "expo-router";
 import { DiscardChangesDialog } from "@maktabi/ui";
+import { userMessage } from "@/data/supabase/errors";
 import {
   useIsFocused,
   usePreventRemove,
@@ -28,8 +29,8 @@ export function useResource<T>(fetcher: () => Promise<T>) {
       .then((result) => {
         if (active) setData(result);
       })
-      .catch(() => {
-        if (active) setError("تعذر قراءة البيانات. حاول مرة أخرى.");
+      .catch((e: unknown) => {
+        if (active) setError(userMessage(e, "تعذر قراءة البيانات. حاول مرة أخرى."));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -61,6 +62,9 @@ export function useUnsavedChanges(dirty: boolean) {
 }
 export const money = (minor: number) =>
   `${new Intl.NumberFormat("ar-SD").format(minor / 100)} ج.س`;
-export const demoNotice =
-  "نسخة محلية • تُحفظ البيانات على هذا الجهاز دون مزامنة مع خادم.";
-
+/** Clients and matters are stored on the office server; what each person sees follows their role. */
+export const serverNotice =
+  "تُحفظ بيانات العملاء والقضايا في خادم المكتب وتظهر لزملائك حسب صلاحياتهم.";
+/** Workflow items (appointments, documents, fees, receipts, stages, notes) are still device-only. */
+export const deviceNotice =
+  "المواعيد والمستندات والأتعاب والإيصالات محفوظة مشفرة على هذا الجهاز فقط ولا تتم مزامنتها بعد.";

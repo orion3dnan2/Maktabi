@@ -18,15 +18,22 @@ import {
   Input,
   LoadingState,
 } from "@maktabi/ui";
+import { useAuth } from "@/auth/AuthProvider";
+import { canEditClientDetails } from "@/auth/access";
 import { clientRepository, newId, OFFICE_ID } from "@/data/repositories";
-import { demoNotice, useResource, useUnsavedChanges } from "../shared/hooks";
+import { userMessage } from "@/data/supabase/errors";
+import { serverNotice, useResource, useUnsavedChanges } from "../shared/hooks";
+// What reception may change on an existing client (the database allows only contact details).
+const contactFields = new Set<keyof Client>(["phone", "whatsapp", "email", "address", "contactPerson"]);
 export default function ClientFormScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
+  const { access } = useAuth();
+  const contactOnly = !!id && !canEditClientDetails(access);
   const fetchClient = useCallback(async () => {
     if (id) {
       const existing = await clientRepository.getById(id);
-      if (!existing) throw new Error("غير موجود");
+      if (!existing) throw new Error("العميل غير موجود أو لا تملك صلاحية الوصول إليه");
       return existing;
     }
     return {
@@ -114,7 +121,7 @@ export default function ClientFormScreen() {
       await clientRepository.save(clean);
       setSaved(true);
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : "تعذر الحفظ");
+      setSaveError(userMessage(e, "تعذر الحفظ"));
     } finally {
       setSaving(false);
     }
@@ -122,19 +129,26 @@ export default function ClientFormScreen() {
   return (
     <FormPage title={id ? "تعديل العميل" : "عميل جديد"}>
       {confirmation}
-      <BodyText muted>{demoNotice}</BodyText>
-      <ChoiceField
-        label="نوع العميل"
-        value={client.kind}
-        options={choices(clientKinds)}
-        onChange={(v) => update("kind", v)}
-      />
+      <BodyText muted>{serverNotice}</BodyText>
+      {contactOnly ? (
+        <>
+          <BodyText>يستطيع موظف الاستقبال تعديل بيانات التواصل فقط.</BodyText>
+          <BodyText>نوع العميل: {clientKinds[client.kind]}</BodyText>
+        </>
+      ) : (
+        <ChoiceField
+          label="نوع العميل"
+          value={client.kind}
+          options={choices(clientKinds)}
+          onChange={(v) => update("kind", v)}
+        />
+      )}
       {fields.map(([key, label]) => (
         <Input
           key={key}
           label={label}
           accessibilityLabel={label}
-          editable={!saving}
+          editable={!saving && (!contactOnly || contactFields.has(key))}
           value={String(client[key] ?? "")}
           onChangeText={(v) => update(key, v)}
           error={errors[key]}

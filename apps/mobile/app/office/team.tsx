@@ -61,7 +61,7 @@ export default function TeamScreen() {
     </View>}
     {resetFor?.id === m.id ? <View style={styles.reset}>
       <Input label="كلمة المرور الجديدة" value={newPassword} onChangeText={setNewPassword} autoCapitalize="none" autoCorrect={false}/>
-      <BodyText muted>إن كان يستخدم التطبيق على جهاز، فالبيانات المحفوظة محلياً عليه تُفتح بكلمة المرور القديمة فقط، إلى أن تنتقل بيانات المكتب إلى الخادم.</BodyText>
+      <BodyText muted>العملاء والقضايا على الخادم وتظهر له بكلمة المرور الجديدة. أما المواعيد والمستندات والأتعاب المحفوظة على جهازه فتُفتح بكلمة المرور القديمة فقط.</BodyText>
       <View style={[styles.actions, { flexDirection: row }]}>
         <View style={styles.action}><Button label="حفظ" disabled={op.busy} onPress={resetPassword}/></View>
         <View style={styles.action}><Button label="إلغاء" variant="ghost" onPress={() => setResetFor(undefined)}/></View>

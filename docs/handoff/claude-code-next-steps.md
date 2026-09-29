@@ -2,10 +2,10 @@
 
 ## Current status
 
-- PR #10 (Phase 1 phone sign-in, roles, RLS, Expo SDK 57) has been merged into `main`.
+- PR #10 (Phase 1 phone sign-in, roles, RLS, Expo SDK 57) is merged into `main`.
 - Supabase project: `ngckrfvsjggpnaddivyq`.
-- The database migration history and the repository migration filenames have now been reconciled on branch `phase2/migration-reconciliation`.
-- The repository now restores the six previously missing migrations from the live Supabase migration history and uses the exact live version numbers for the four Phase 1 migrations.
+- Migration history reconciled (branch `phase2/migration-reconciliation`, merged): the repository files match the live `supabase_migrations.schema_migrations` byte for byte, and all migrations replay in order on a clean PostgreSQL 17 (`supabase/tests/local/supabase_stub.sql`).
+- **Phase 2 (branch `phase2/supabase-clients-matters`): Clients and Matters moved to Supabase.** Migration `20260929081219_phase2_clients_matters` is applied to the live project. The app reads and writes clients, matters and matter parties only through `apps/mobile/src/data/supabase/*`; RLS is the security boundary.
 
 ## Migration source of truth
 
@@ -21,25 +21,40 @@ The authoritative applied migration history is:
 8. `20260928140850_platform_owner_client_portal_access`
 9. `20260928141155_svc_actor_info`
 10. `20260928141547_fix_bootstrap_owner_delete`
+11. `20260929081219_phase2_clients_matters` — `clients.whatsapp` (reception may edit it); `matter_parties` references a client instead of copying its name (exactly one of `client_id` / `display_name`, a client once per matter); `public.save_matter(p_matter, p_parties)`, SECURITY INVOKER, saves a matter and its parties in one transaction.
 
 Do not create replacement migration versions for these entries. New database changes must use new later migration versions only.
 
+## What Phase 2 changed in the app
+
+- `src/data/supabase/`: typed repositories (`database.types.ts` generated from the live schema), row/domain mappers, Arabic error mapping (`RepositoryError`, technical details kept on the error).
+- Clients: list (non-archived), archived list, get, create/update (upsert by id, never sends `office_id` or `status`), archive/restore by status. No deletes anywhere.
+- Matters: list/get/by client/active, create/update through `save_matter`, status change, assigned lawyer (admin reassigns; a lawyer's new matter is assigned to themselves — enforced by `guard_matters`). Client names are always joined from `clients`, never copied.
+- Device vault (`src/data/localStore.ts`, snapshot version 2) now holds only matter workflows (appointments, documents, fees, receipts, expenses, deposits, stages, deadlines, notes, activity) and office settings, keyed by the server matter id. Every workflow write re-reads the matter from the server; closing a matter changes its server status first. Version-1 vaults keep their old client/matter records encrypted and unread under `legacy`.
+- Dashboard: client and active-matter counts from Supabase, greeting from the signed-in user; sessions/deadlines/fees/activity from the device and labelled as such.
+- Reception: no matter screens (RLS gives none), contact-only client edits. Role helpers in `src/auth/access.ts` mirror the database rules; the database enforces them.
+
+## How it was verified
+
+- `supabase/tests/phase1_access.sql` and `supabase/tests/phase2_clients_matters.sql` (44 checks, `failures=0`) on the live project and on a fresh local replay.
+- Live checks after the migration: columns, constraints, FKs, indexes, RLS enabled with unchanged policies, `save_matter` not SECURITY DEFINER, execute granted to `authenticated` only. Security advisors: only the four pre-existing intentional SECURITY DEFINER RPC warnings.
+- `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm typecheck` (also with generated typed routes), `pnpm test` (domain 31, mobile 116), `pnpm build`.
+- `supabase/tests/local/e2e/`: the exported web app in Chromium against the replayed database behind a real PostgREST 12 — 15 scenarios (CRUD, relationships, reload, new device, Office A/B isolation, lawyer and reception rules), each checked in the database. GoTrue is simulated by a small gateway; the live Supabase API host was not reachable from the build environment.
+
 ## Immediate next work
 
-1. Validate the restored migration files against the live Supabase migration history.
-2. Ensure a fresh database can replay the migrations in order without manual intervention.
-3. Run the Phase 1 RLS regression SQL test.
-4. Start Phase 2 by moving Clients and Matters from local encrypted repositories to Supabase, preserving office isolation and RLS.
-5. Keep Dashboard and Calendar derived from the same authoritative repositories instead of duplicating state.
-6. Add migration/database checks to CI so repository/database drift is caught automatically.
+1. Product decisions for Sudan (ask before changing anything): identity document type/format for «الرقم الوطني» (today `id_type = 'national_id'`, no country, no format), and the remaining Kuwait defaults in the base schema (`offices`/`payments` column defaults `KW`/`KWD`/`Asia/Kuwait`, `next_matter_number` year in `Asia/Kuwait`, the 12-digit civil-ID constraint, `knet`). Offices created through `svc_create_office` already get `SD`/`SDG`/`Africa/Khartoum`.
+2. Move matter workflows to the existing Supabase tables (`appointments`, `documents` + Storage, `payments`, `tasks`) with the same repository pattern, then retire the device vault for them.
+3. Offline/sync layer behind the domain repository interfaces (queue, idempotent writes with device UUIDs, conflict handling).
+4. Duplicate detection by phone / similar name (national number is already unique per office).
+5. Add migration replay + the two SQL access tests to CI (the local stub makes this possible without Docker).
+6. Build hygiene: Turbo's `build` cache and Metro's cache do not key on `EXPO_PUBLIC_*`/`.env`; use `pnpm build --force` and `expo export --clear` until fixed.
 
 ## Authentication security
 
 Public self-signup must remain disabled. Accounts should be created only through the trusted server-side `manage-users` flow according to the Phase 1 role model.
 
-The Supabase connector available in ChatGPT does not expose the Auth dashboard setting for toggling public signup, so verify in Supabase Dashboard:
-
-Authentication → Sign In / Providers (or Auth settings) → disable **Allow new users to sign up**.
+Verify in Supabase Dashboard: Authentication → Sign In / Providers (or Auth settings) → disable **Allow new users to sign up**.
 
 Do not replace this control with a frontend-only restriction.
 
@@ -47,6 +62,8 @@ Do not replace this control with a frontend-only restriction.
 
 - Do not bypass RLS.
 - Never place a `service_role` key in the mobile app.
-- Do not move Clients or Matters to cloud persistence until migration replay is verified.
+- Screens never call Supabase directly for clients and matters; use `src/data/repositories.ts`.
+- Do not hard-delete legal or business records; archive by status.
 - Do not modify Sudan-specific defaults (currency, timezone, identity, payment methods) without explicit product approval.
+- Run `supabase/tests/phase1_access.sql` and `supabase/tests/phase2_clients_matters.sql` after any change to permissions, clients, matters or parties.
 - Update README and this handoff whenever architecture or migration state changes.

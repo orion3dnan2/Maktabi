@@ -1,19 +1,26 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { clientKinds, filterClients, matterTypes, type MatterType } from '@maktabi/domain';
 import { colors, elevation, EmptyState, ErrorState, LoadingState, typography } from '@maktabi/ui';
 import { ActionButton, arabicCount, Avatar, Chevron, HeroHeader, LuxeCard, Pill, row, rtl, SectionTitle, Sheet, Timeline, type TimelineItem, type Tone } from '@/components/luxe';
+import { useAuth } from '@/auth/AuthProvider';
+import { canUseMatters } from '@/auth/access';
 import { clientRepository, matterRepository, OFFICE_ID, profileRepository } from '@/data/repositories';
-import { useResource } from '../shared/hooks';
+import { serverNotice, useResource } from '../shared/hooks';
 
-const fetchClients = async () => {
-  const [clients, matters] = await Promise.all([clientRepository.listByOffice(OFFICE_ID), matterRepository.listByOffice(OFFICE_ID)]);
-  const profiles = new Map(await Promise.all(clients.map(async (c) => [c.id, await profileRepository.getByClient(c.id)] as const)));
+const fetchClients = async (archived: boolean, withMatters: boolean) => {
+  const [clients, matters] = await Promise.all([
+    archived ? clientRepository.listArchived(OFFICE_ID) : clientRepository.listByOffice(OFFICE_ID),
+    withMatters ? matterRepository.listByOffice(OFFICE_ID) : Promise.resolve([]),
+  ]);
   const counts = new Map<string, number>();
   for (const m of matters) if (m.status === 'ACTIVE') for (const id of new Set(m.parties.map((p) => p.clientId))) if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
-  return { clients, matters, profiles, counts };
+  const featured = archived ? undefined : [...clients].sort((a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0))[0];
+  // Only the featured client's activity is shown here; the matters are already loaded, so this reads nothing from the server.
+  const featuredProfile = featured ? await profileRepository.getByClient(featured.id, matters) : undefined;
+  return { clients, matters, counts, featured, featuredProfile };
 };
 const LRM = String.fromCharCode(0x200e); // keeps "+249…" phone numbers left-to-right inside RTL text
 const clock = new Intl.DateTimeFormat('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true, numberingSystem: 'latn' });
@@ -23,18 +30,21 @@ const kindPill = (t: MatterType): { pill: string; tone: Tone; icon: string; mc?:
 
 export default function ClientListScreen() {
   const router = useRouter();
-  const { data, error, loading, reload } = useResource(fetchClients);
+  const { access } = useAuth();
+  const withMatters = canUseMatters(access);
+  const [archived, setArchived] = useState(false);
+  const { data, error, loading, reload } = useResource(useCallback(() => fetchClients(archived, withMatters), [archived, withMatters]));
   const [query, setQuery] = useState('');
   const [kind, setKind] = useState('');
   const filtered = useMemo(() => filterClients(data?.clients ?? [], query, kind), [data, query, kind]);
   const open = (id: string) => router.push({ pathname: '/clients/[id]', params: { id } });
-  const featured = useMemo(() => data ? [...data.clients].sort((a, b) => (data.counts.get(b.id) ?? 0) - (data.counts.get(a.id) ?? 0))[0] : undefined, [data]);
+  const featured = data?.featured;
   const upcoming: TimelineItem[] = useMemo(() => (data?.matters ?? []).filter((m) => m.nextEventAt).sort((a, b) => a.nextEventAt!.localeCompare(b.nextEventAt!)).slice(0, 3).map((m) => {
     const k = kindPill(m.type); const d = new Date(m.nextEventAt!);
     return { id: m.id, time: clock.format(d), date: weekday.format(d), title: m.parties.find((p) => p.isPrimary)?.displayName ?? m.title, subtitle: `${k.pill} — ${m.title} (${matterTypes[m.type]})`, icon: k.icon as never, mc: k.mc, pill: k.pill, tone: k.tone, onPress: () => router.push({ pathname: '/matters/[id]', params: { id: m.id } }) };
   }), [data, router]);
-  const preview = (title: string, body: string) => Alert.alert(title, `${body}\nلا يتم الاتصال أو إرسال رسائل للأرقام التجريبية.`);
-  const featuredProfile = featured ? data?.profiles.get(featured.id) : undefined;
+  const preview = (title: string, body: string) => Alert.alert(title, `${body}\nالاتصال وواتساب غير مفعّلين بعد في التطبيق.`);
+  const featuredProfile = data?.featuredProfile;
   return <View style={styles.flex}>
     <ScrollView keyboardShouldPersistTaps="handled">
       <HeroHeader title="العملاء والمواعيد" subtitle="إدارة علاقات العملاء ومتابعة المواعيد بكل سهولة" compactTitle/>
@@ -56,7 +66,7 @@ export default function ClientListScreen() {
             </Pressable>
           </View>
           <View style={[styles.actions, { flexDirection: row }]}>
-            <ActionButton variant="navy" icon="call" label="اتصال" onPress={() => preview('معاينة الاتصال', `رقم تجريبي: ${featured.phone}`)}/>
+            <ActionButton variant="navy" icon="call" label="اتصال" onPress={() => preview('معاينة الاتصال', `الرقم: ${featured.phone}`)}/>
             <ActionButton variant="green" icon="logo-whatsapp" label="واتساب" onPress={() => preview('معاينة واتساب', `الرقم: ${featured.whatsapp || featured.phone}`)}/>
             <ActionButton variant="cream" grow={1.3} icon="document-text-outline" label="إضافة ملاحظة" onPress={() => router.push({ pathname: '/clients/[id]/edit', params: { id: featured.id } })}/>
           </View>
@@ -66,7 +76,7 @@ export default function ClientListScreen() {
           <Timeline items={upcoming}/>
         </LuxeCard> : null}
         <LuxeCard>
-          <SectionTitle icon="account-group" mc title="قائمة العملاء" action="عميل جديد" onAction={() => router.push('/clients/new')}/>
+          <SectionTitle icon="account-group" mc title={archived ? 'العملاء المؤرشفون' : 'قائمة العملاء'} action="عميل جديد" onAction={() => router.push('/clients/new')}/>
           <View style={[styles.search, { flexDirection: row }]}>
             <Ionicons name="search" size={20} color={colors.navy900}/>
             <TextInput value={query} onChangeText={setQuery} placeholder="اسم العميل أو رقم الهاتف" placeholderTextColor={colors.muted} accessibilityLabel="البحث في العملاء" style={styles.searchInput}/>
@@ -74,7 +84,7 @@ export default function ClientListScreen() {
           <View style={[styles.filters, { flexDirection: row }]}>
             {[['', 'الكل'], ...Object.entries(clientKinds)].map(([value, label]) => <Pressable key={value} onPress={() => setKind(value!)} accessibilityRole="button" accessibilityState={{ selected: kind === value }} style={[styles.filter, kind === value && styles.filterActive]}><Text style={[styles.filterText, kind === value && styles.filterTextActive]}>{label}</Text></Pressable>)}
           </View>
-          {data && !filtered.length ? <EmptyState title="لا يوجد عملاء" message="أضف عميلاً جديداً أو غيّر البحث والتصفية."/> : null}
+          {data && !filtered.length ? <EmptyState title={archived ? 'لا يوجد عملاء مؤرشفون' : 'لا يوجد عملاء'} message={archived ? 'العملاء المؤرشفون يظهرون هنا ويمكن استعادتهم من ملف العميل.' : 'أضف عميلاً جديداً أو غيّر البحث والتصفية.'}/> : null}
           {filtered.map((c, i) => { const n = data?.counts.get(c.id) ?? 0;
             return <Pressable key={c.id} accessibilityRole="button" accessibilityLabel={`فتح ملف العميل ${c.displayName}`} onPress={() => open(c.id)} style={({ pressed }) => [styles.clientRow, { flexDirection: row }, i > 0 && styles.divider, pressed && { opacity: 0.7 }]}>
               <Avatar size={50}/>
@@ -82,8 +92,9 @@ export default function ClientListScreen() {
               <View style={[styles.miniRow, { flexDirection: row }]}><Ionicons name="calendar-outline" size={22} color={colors.gold600}/><Text style={styles.count}>{arabicCount(n, 'قضية', 'قضايا')}</Text></View>
               <Chevron color={colors.navy900}/>
             </Pressable>; })}
+          <Pressable accessibilityRole="button" onPress={() => setArchived(!archived)} style={({ pressed }) => [styles.archiveToggle, pressed && { opacity: 0.7 }]}><Text style={styles.archiveToggleText}>{archived ? 'عرض العملاء الحاليين' : 'عرض العملاء المؤرشفين'}</Text></Pressable>
         </LuxeCard>
-        <Text style={styles.disclaimer}>تُحفظ البيانات محلياً على هذا الجهاز.</Text>
+        <Text style={styles.disclaimer}>{serverNotice}</Text>
       </Sheet>
     </ScrollView>
   </View>;
@@ -115,6 +126,8 @@ const styles = StyleSheet.create({
   clientName: { ...rtl, color: colors.navy950, fontFamily: typography.bold, fontSize: 16 },
   count: { color: colors.navy900, fontFamily: typography.medium, fontSize: 14 },
   disclaimer: { ...rtl, textAlign: 'center', color: colors.muted, fontFamily: typography.regular, fontSize: 11 },
+  archiveToggle: { alignSelf: 'center', paddingHorizontal: 14, paddingVertical: 8 },
+  archiveToggleText: { color: colors.navy900, fontFamily: typography.medium, fontSize: 13, textDecorationLine: 'underline' },
 });
 
 

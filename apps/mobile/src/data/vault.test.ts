@@ -6,12 +6,12 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, encryptText, KDF_ITERATIONS } from './crypto';
 const fixture = vi.hoisted(() => ({ store: new Map<string, string>(), fail: false }));
 vi.mock('@react-native-async-storage/async-storage', () => ({ default: { async getItem(key: string) { return fixture.store.get(key) ?? null; }, async setItem(key: string, value: string) { if (fixture.fail) throw new Error('disk full'); fixture.store.set(key, value); }, async removeItem(key: string) { fixture.store.delete(key); } } }));
-vi.mock('expo-crypto', () => ({ async getRandomBytesAsync(length: number) { return crypto.getRandomValues(new Uint8Array(length)); } }));
+vi.mock('expo-crypto', () => ({ randomUUID: () => crypto.randomUUID(), async getRandomBytesAsync(length: number) { return crypto.getRandomValues(new Uint8Array(length)); } }));
 const phone = '+249000000999'; const password = 'Maktabi-test-passphrase';
 beforeEach(() => { lockVault(); fixture.store.clear(); fixture.fail = false; });
 describe('office vault lifecycle', () => {
   it('creates an empty office, persists encrypted data, locks and verifies phone/password', async () => {
-    await createVault(phone, password); expect(isUnlocked()).toBe(true); expect(JSON.parse((await vaultStorage.getItem(''))!).clients).toEqual([]);
+    await createVault(phone, password); expect(isUnlocked()).toBe(true); expect(JSON.parse((await vaultStorage.getItem(''))!)).toMatchObject({ version: 2, workflows: [] });
     await vaultStorage.setItem('', JSON.stringify({ client: 'معلومات خاصة' })); expect(await encryptedBackup()).not.toContain('معلومات خاصة');
     lockVault(); await expect(vaultStorage.getItem('')).rejects.toThrow(); await expect(unlockVault(phone, 'wrong-password')).rejects.toThrow(); expect(isUnlocked()).toBe(false);
     await unlockVault(phone, password); expect(await vaultStorage.getItem('')).toContain('معلومات خاصة');
@@ -24,7 +24,7 @@ describe('office vault lifecycle', () => {
   it('validates a backup before replacing the current office and locks after restore', async () => {
     await createVault(phone, password); const backup = await encryptedBackup(); await vaultStorage.setItem('', JSON.stringify({ version: 1, clients: [{ id: 'later' }], matters: [] }));
     await expect(restoreEncryptedBackup(backup, phone, 'wrong')).rejects.toThrow(); expect(await vaultStorage.getItem('')).toContain('later');
-    await restoreEncryptedBackup(backup, phone, password); expect(isUnlocked()).toBe(false); await unlockVault(phone, password); expect(JSON.parse((await vaultStorage.getItem(''))!).clients).toEqual([]);
+    await restoreEncryptedBackup(backup, phone, password); expect(isUnlocked()).toBe(false); await unlockVault(phone, password); expect(await vaultStorage.getItem('')).not.toContain('later');
   });
   it('opens vaults created with the old fixed 600k KDF and upgrades them to the current cost', async () => {
     const salt = new Uint8Array(16).fill(5); const key = new Uint8Array(32).fill(6);
@@ -49,7 +49,7 @@ describe('per-user workspaces', () => {
     await openUserVault('user-a', phone, password); expect(await vaultStorage.getItem('')).toContain('"a"');
     await expect(openUserVault('user-a', phone, 'Reset-by-admin-123')).rejects.toBeInstanceOf(VaultPasswordMismatch);
     selectVaultUser('user-a'); await discardUserVault(); await openUserVault('user-a', phone, 'Reset-by-admin-123');
-    expect(JSON.parse((await vaultStorage.getItem(''))!).clients).toEqual([]);
+    expect(await vaultStorage.getItem('')).not.toContain('"a"');
     selectVaultUser(null);
   });
 });

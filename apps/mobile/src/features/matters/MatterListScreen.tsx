@@ -1,14 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { filterMatters, matterStatuses, matterTypes, type Matter, type MatterFilters } from '@maktabi/domain';
 import { Button, ChoiceField, choices, colors, elevation, EmptyState, ErrorState, FormPage, LoadingState, typography } from '@maktabi/ui';
 import { Chevron, HeroHeader, IconBubble, LuxeCard, Pill, row, rtl, type IonName, type Tone } from '@/components/luxe';
+import { useAuth } from '@/auth/AuthProvider';
+import { canUseMatters } from '@/auth/access';
 import { matterRepository, OFFICE_ID } from '@/data/repositories';
 import { useResource } from '../shared/hooks';
 
-const fetchMatters = () => matterRepository.listByOffice(OFFICE_ID);
 const initial: MatterFilters = { query: '', status: '', type: '', authority: '', sort: 'recent' };
 const chips = { all: 'الكل', active: 'نشطة', upcoming: 'الجلسات القادمة', closed: 'مغلقة' } as const;
 type Chip = keyof typeof chips;
@@ -26,7 +27,10 @@ function MetaLine({ icon, mc, text }: { icon: string; mc?: boolean; text: string
 
 export default function MatterListScreen() {
   const router = useRouter();
-  const { data, error, loading, reload } = useResource(fetchMatters);
+  const { access } = useAuth();
+  const allowed = canUseMatters(access);
+  // RLS returns no matters to reception; say so instead of showing an empty office.
+  const { data, error, loading, reload } = useResource(useCallback(() => (allowed ? matterRepository.listByOffice(OFFICE_ID) : Promise.resolve([])), [allowed]));
   const [filters, setFilters] = useState(initial);
   const [chip, setChip] = useState<Chip>('all');
   const [visible, setVisible] = useState(false);
@@ -40,7 +44,7 @@ export default function MatterListScreen() {
         <Ionicons name="search" size={24} color={colors.navy900}/>
         <TextInput value={filters.query} onChangeText={(v) => set('query', v)} placeholder="البحث في القضايا (رقم القضية، عنوان، عميل)" placeholderTextColor={colors.muted} accessibilityLabel="البحث في القضايا" style={styles.searchInput}/>
         <Pressable accessibilityRole="button" accessibilityLabel="تصفية وترتيب" onPress={() => setVisible(true)} hitSlop={8} style={styles.searchBtn}><Ionicons name="options-outline" size={20} color={colors.navy900}/>{count ? <View style={styles.badge}><Text style={styles.badgeText}>{count}</Text></View> : null}</Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="قضية جديدة" onPress={() => router.push('/matters/new')} hitSlop={8} style={[styles.searchBtn, styles.addBtn]}><Ionicons name="add" size={22} color={colors.white}/></Pressable>
+        {allowed ? <Pressable accessibilityRole="button" accessibilityLabel="قضية جديدة" onPress={() => router.push('/matters/new')} hitSlop={8} style={[styles.searchBtn, styles.addBtn]}><Ionicons name="add" size={22} color={colors.white}/></Pressable> : null}
       </View>
       <View style={[styles.chips, { flexDirection: row }]}>
         {(Object.keys(chips) as Chip[]).map((key) => <Pressable key={key} accessibilityRole="button" accessibilityState={{ selected: chip === key }} onPress={() => setChip(key)} style={[styles.chip, chip === key && styles.chipActive]}><Text numberOfLines={1} style={[styles.chipText, chip === key && styles.chipTextActive]}>{chips[key]}</Text></Pressable>)}
@@ -50,7 +54,7 @@ export default function MatterListScreen() {
   </>;
   return <View style={styles.flex}>
     <FlatList data={rows} keyExtractor={(m) => m.id} refreshing={loading && !!data} onRefresh={reload} keyboardShouldPersistTaps="handled" ListHeaderComponent={header} contentContainerStyle={styles.list}
-      ListEmptyComponent={loading ? <LoadingState/> : <EmptyState title="لا توجد قضايا مطابقة" message="غيّر التصفية أو أنشئ قضية جديدة."/>}
+      ListEmptyComponent={!allowed ? <EmptyState title="لا تملك صلاحية الاطلاع على القضايا" message="القضايا متاحة لمدير المكتب والموظفين، وللمحامي فيما أُسند إليه."/> : loading ? <LoadingState/> : <EmptyState title="لا توجد قضايا مطابقة" message="غيّر التصفية أو أنشئ قضية جديدة."/>}
       renderItem={({ item: m }) => { const badge = matterBadge(m); const client = m.parties.find((p) => p.isPrimary)?.displayName ?? 'غير محدد';
         return <View style={styles.cardWrap}><LuxeCard style={{ padding: 12, gap: 4 }} accessibilityLabel={`فتح القضية ${m.title}`} onPress={() => router.push({ pathname: '/matters/[id]', params: { id: m.id } })}>
           <View style={[styles.cardRow, { flexDirection: row }]}>

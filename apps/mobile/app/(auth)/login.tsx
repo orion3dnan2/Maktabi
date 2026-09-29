@@ -32,7 +32,7 @@ export default function LoginScreen() {
     } finally { setBusy(false); }
   };
   const confirmDiscard = () => {
-    const message = 'سيتم حذف بيانات المكتب المحفوظة محلياً لهذا الحساب على هذا الجهاز فقط. لا يمكن التراجع.';
+    const message = 'سيتم حذف ما حُفظ لهذا الحساب على هذا الجهاز فقط (المواعيد والمستندات والأتعاب وإعدادات المكتب). بيانات العملاء والقضايا على الخادم لا تتأثر. لا يمكن التراجع.';
     if (Platform.OS === 'web') { if (globalThis.confirm?.(message)) void submit(true); return; }
     Alert.alert('بدء بيانات جديدة', message, [{ text: 'إلغاء', style: 'cancel' }, { text: 'حذف والمتابعة', style: 'destructive', onPress: () => void submit(true) }]);
   };

@@ -1,12 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { createLocalRepositories } from './localRepositories';
 import { paidTotal, trustBalance } from './workflow';
+import { fakeMatterSource, serverMatter } from '../test/fakeMatters';
 
-function fixture() { let saved: string | null = null; let fail = false; const storage = { async getItem() { return saved; }, async setItem(_key: string, value: string) { if (fail) throw new Error('storage full'); saved = value; } }; return { r: createLocalRepositories(storage), reload: () => createLocalRepositories(storage), fail: (v: boolean) => { fail = v; } }; }
+function fixture() {
+  let saved: string | null = null; let fail = false;
+  const storage = { async getItem() { return saved; }, async setItem(_key: string, value: string) { if (fail) throw new Error('storage full'); saved = value; } };
+  const server = fakeMatterSource([serverMatter('m1', 'CIVIL'), serverMatter('m2', 'LABOUR'), serverMatter('m3', 'CRIMINAL'), serverMatter('m5', 'SPECIAL_COURT'), serverMatter('m6', 'COMMERCIAL_REGISTRY')]);
+  return { server, r: createLocalRepositories(storage, server.source), reload: () => createLocalRepositories(storage, server.source), fail: (v: boolean) => { fail = v; } };
+}
 const payment = (id: string, amount: number) => ({ id, amount, date: '2026-09-27T10:00:00Z', method: 'بنكك', receiver: 'المحاسب' });
 describe('office procedures and accounting', () => {
   it('retains authority numbers through stages and synchronizes the calendar appointment', async () => {
-    const { r, reload } = fixture(); await r.officeRepository.appendProcedure('m3', 'criminal');
+    const { r, reload, server } = fixture(); await r.officeRepository.appendProcedure('m3', 'criminal');
     let w = await r.workflowRepository.getByMatter('m3'); const first = w.stages[0]!;
     await expect(r.officeRepository.transitionStage('m3', w.stages[1]!.id, 'ACTIVE')).rejects.toThrow();
     await r.officeRepository.transitionStage('m3', first.id, 'ACTIVE');
@@ -17,7 +23,7 @@ describe('office procedures and accounting', () => {
     w = await reload().workflowRepository.getByMatter('m3');
     expect(w.stages[0]).toMatchObject({ reference: 'POL-15', status: 'COMPLETED', details: { officer: 'ضابط اختبار' } });
     expect(w.appointments.find((a) => a.stageId === first.id)?.startsAt).toBe('2026-09-29T09:00:00.000Z');
-    expect((await r.matterRepository.getById('m3'))?.nextEventAt).toBe('2026-09-29T09:00:00.000Z');
+    expect((await r.progress([server.rows.get('m3')!]))[0]).toMatchObject({ nextEventAt: '2026-09-29T09:00:00.000Z', currentStage: w.stages[1]!.name });
   });
   it('requires a skip reason and refuses concurrent procedure replacement', async () => {
     const { r } = fixture(); await r.officeRepository.appendProcedure('m1', 'trial'); const w = await r.workflowRepository.getByMatter('m1');
@@ -34,7 +40,8 @@ describe('office procedures and accounting', () => {
     await r.officeRepository.transitionStage('m6', stage.id, 'COMPLETED');
   });
   it('records session outcome and the following session atomically', async () => {
-    const { r } = fixture(); const appointment = (await r.workflowRepository.getByMatter('m1')).appointments[0]!;
+    const { r } = fixture(); await r.workflowRepository.addAppointment('m1', { title: 'جلسة القضية', startsAt: '2026-10-01T09:00:00Z' });
+    const appointment = (await r.workflowRepository.getByMatter('m1')).appointments[0]!;
     await expect(r.officeRepository.finishSession('m1', appointment.id, 'تم التأجيل', '2026-09-01T09:00:00Z')).rejects.toThrow();
     expect((await r.workflowRepository.getByMatter('m1')).appointments[0]?.status).toBe('SCHEDULED');
     await r.officeRepository.finishSession('m1', appointment.id, 'تم سماع الشاهد', '2026-11-01T09:00:00Z');
@@ -73,6 +80,9 @@ describe('office procedures and accounting', () => {
     await r.officeRepository.issueReceipt('m1', payment('a', 30000));
     await expect(r.officeRepository.saveInstallments('m1', [{ id: 'f1', title: 'البدء', amount: 20000, dueDate: '2026-09-20' }])).rejects.toThrow();
     expect((await r.workflowRepository.getByMatter('m1')).agreedFees).toBe(70000);
+  });
+  it('refuses procedures that do not fit the server-side matter type', async () => {
+    const { r } = fixture(); await expect(r.officeRepository.appendProcedure('m6', 'criminal')).rejects.toThrow('اختر مساراً مناسباً');
   });
   it('stores office prerequisites without falsely marking external services active', async () => {
     const { r, reload } = fixture(); await r.officeRepository.submitReadiness({ service: 'library', notes: 'مصادر للمراجعة', links: 'https://example.test/laws', documents: [], submittedAt: '' });

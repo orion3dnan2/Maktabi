@@ -18,6 +18,13 @@ export const roleLabels: Record<OfficeRole, string> = {
 };
 
 export const isStaff = (a: Access | undefined) => !!a?.role && a.role !== 'client' && a.is_active && a.office?.status === 'active';
+// The next three mirror database rules so screens can show the right state; the database enforces them.
+/** Matters: RLS gives reception no access to matters or their parties. */
+export const canUseMatters = (a: Access | undefined) => isStaff(a) && a?.role !== 'reception';
+/** Reception may only change a client's contact details (guard_clients): not the name, identity, notes or status. */
+export const canEditClientDetails = (a: Access | undefined) => isStaff(a) && a?.role !== 'reception';
+/** Only an office admin may change the lawyer of an existing matter (guard_matters). */
+export const canReassignMatters = (a: Access | undefined) => isStaff(a) && a?.role === 'admin';
 
 /** Why this account cannot use the app, or null if it can. */
 export function accessProblem(a: Access | null | undefined): string | null {
@@ -43,6 +50,7 @@ export function canOpen(a: Access, segments: string[]): boolean {
   if (first === 'portal') return a.role === 'client';
   if (first === '(auth)') return false;
   if (first === 'office' && second === 'team') return a.role === 'admin';
+  if (first === 'matters') return canUseMatters(a);
   // Office workspace: (tabs), clients, matters, office/*
   return isStaff(a);
 }

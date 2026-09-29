@@ -68,7 +68,7 @@ export function createOfficeOperations(c: OfficeContext) {
       if (status === 'SKIPPED' && !reason.trim()) throw new Error('سبب تجاوز المرحلة مطلوب');
       stage.status = status; if (status !== 'ACTIVE') stage.completedAt = new Date().toISOString();
       if (reason) stage.notes += `\nسبب التجاوز: ${reason}`;
-      c.matter(id).currentStage = stage.name;
+      w.currentStage = stage.name;
       c.commit(id, w, `${status === 'ACTIVE' ? 'بدء' : status === 'COMPLETED' ? 'إتمام' : 'تجاوز'} مرحلة ${stage.name}${reason ? `: ${reason}` : ''}`);
     },
     async addDeadline(id: string, deadline: Omit<CaseDeadline, 'id' | 'completed'>) {

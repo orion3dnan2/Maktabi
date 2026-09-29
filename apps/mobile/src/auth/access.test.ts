@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { accessProblem, canOpen, homeFor, type Access } from './access';
+import { accessProblem, canEditClientDetails, canOpen, canReassignMatters, canUseMatters, homeFor, type Access } from './access';
 
 const office = { id: 'o1', name: 'مكتب', status: 'active' as const };
 const user = (patch: Partial<Access>): Access => ({ user_id: 'u', full_name: 'x', phone: null, role: 'lawyer', is_active: true, client_id: null, office, platform_admin: false, ...patch });
@@ -23,6 +23,21 @@ describe('access routing', () => {
     expect(canOpen(user({ role: 'admin' }), ['office', 'team'])).toBe(true);
     expect(canOpen(user({ role: 'admin' }), ['platform'])).toBe(false);
     expect(canOpen(user({ role: null, office: null, platform_admin: true }), ['platform'])).toBe(true);
+  });
+  it('mirrors the database rules for matters and client details', () => {
+    const reception = user({ role: 'reception' });
+    expect(canUseMatters(reception)).toBe(false);
+    expect(canOpen(reception, ['matters', 'new'])).toBe(false);
+    expect(canOpen(reception, ['clients', 'new'])).toBe(true);
+    expect(canEditClientDetails(reception)).toBe(false);
+    for (const role of ['admin', 'lawyer', 'employee'] as const) {
+      expect(canUseMatters(user({ role }))).toBe(true);
+      expect(canEditClientDetails(user({ role }))).toBe(true);
+      expect(canReassignMatters(user({ role }))).toBe(role === 'admin');
+    }
+    expect(canUseMatters(user({ role: 'client', client_id: 'c1' }))).toBe(false);
+    expect(canUseMatters(user({ role: 'admin', is_active: false }))).toBe(false);
+    expect(canUseMatters(undefined)).toBe(false);
   });
   it('never lets a signed-in user stay on the sign-in screens or splash', () => {
     expect(canOpen(user({}), ['(auth)', 'login'])).toBe(false);

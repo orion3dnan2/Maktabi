@@ -1,12 +1,12 @@
 # مكتبي — Maktabi
 
-> **Live Implementation Roadmap — آخر مراجعة: 2026-09-27**
+> **Live Implementation Roadmap — آخر مراجعة: 2026-09-29**
 >
 > هذا الملف هو مصدر الحقيقة لحالة تنفيذ المشروع. يجب تحديثه في نفس الـPR/commit عند إكمال أي مرحلة أو صفحة أو تغيير حالة اختبار. لا تعتبر أي ميزة "مكتملة" لمجرد أن واجهتها موجودة.
 
 تطبيق عربي أولاً لإدارة مكاتب المحامين في السودان: العملاء، القضايا ومساراتها، الجلسات، المستندات، الأتعاب والإيصالات، المصروفات وأمانة العميل، التوثيقات، المكتبة والصيغ القانونية، ثم المساعد الذكي والتواصل عبر واتساب.
 
-> المصادقة والصلاحيات (Supabase + RLS) منفذة في المرحلة 1. بيانات شاشات المكتب ما زالت محلية مشفّرة على الجهاز حتى المرحلة 2، فلا تُدخل بيانات موكلين حقيقية بعد.
+> المصادقة والصلاحيات (Supabase + RLS) منفذة في المرحلة 1. منذ المرحلة 2 تُحفظ بيانات **العملاء والقضايا وأطرافها** في Supabase مع RLS. أما المواعيد والمستندات والأتعاب والإيصالات والمصروفات ومراحل الإجراءات فما زالت محلية مشفّرة على الجهاز دون مزامنة، فلا تُدخل بيانات موكلين حقيقية بعد.
 
 التطبيق الأساسي: **React Native + Expo + TypeScript + Expo Router** داخل `apps/mobile`.
 
@@ -20,24 +20,24 @@
 | Supabase client | ✅ منجز | SecureStore مقسّم لأجزاء على iOS/Android + localStorage على الويب |
 | Login | 🟡 جزئي | دخول حقيقي برقم الهاتف وكلمة المرور؛ مدير المكتب يعيّن كلمة مرور جديدة؛ لا استعادة ذاتية |
 | Office / profiles / membership | 🟡 جزئي | المرحلة 1: مالك المنصة ← مكتب ومديره ← أعضاء عبر Edge Function `manage-users` ([التفاصيل](docs/phase-1-accounts.md)) |
-| RBAC / permissions | 🟡 جزئي | أدوار المكتب ودور الموكل `client` + RLS و`supabase/tests/phase1_access.sql`؛ جداول الشاشات لم تُنقل إلى Supabase بعد |
-| Clients UI | 🟡 جزئي | List/Create/Edit/Profile موجودة؛ البيانات محلية مشفّرة على الجهاز، ليست على الخادم |
-| Matters UI | 🟡 جزئي | List/Create + validation موجودة؛ البيانات محلية مشفّرة على الجهاز؛ التفاصيل/workflow غير مكتملة |
-| Dashboard | 🟡 جزئي | الملخص من mockDashboardRepository؛ العملاء والقضايا من المساحة المحلية |
-| Calendar / sessions | 🟡 جزئي | شاشة المواعيد تعرض مواعيد القضايا من المساحة المحلية |
+| RBAC / permissions | 🟡 جزئي | أدوار المكتب ودور الموكل `client` + RLS؛ العملاء والقضايا وأطرافها على Supabase ومختبرة (`phase1_access.sql` + `phase2_clients_matters.sql`)؛ المواعيد/المستندات/المدفوعات لم تُربط بجداولها بعد |
+| Clients UI | 🟡 جزئي | List/Create/Edit/Profile/أرشفة واستعادة على Supabase (بلا حذف)؛ الاستقبال يعدّل بيانات التواصل فقط؛ الأتعاب والإيصالات والمستندات في الملف من الجهاز؛ لا offline/sync |
+| Matters UI | 🟡 جزئي | List/Create/Edit/Details/أرشفة على Supabase، مع المحامي المسؤول والأطراف المرتبطة بسجلات العملاء؛ مسار القضية (مواعيد/مستندات/أتعاب/مراحل) ما زال على الجهاز؛ لا offline/sync |
+| Dashboard | 🟡 جزئي | عدد العملاء والقضايا النشطة من Supabase واسم المستخدم الحقيقي؛ الجلسات والمهل والأتعاب والنشاط من بيانات الجهاز (موضّح في الشاشة) |
+| Calendar / sessions | 🟡 جزئي | القضايا من Supabase والمواعيد من مسار القضية على الجهاز (غير متزامنة) |
 | Documents/scanner | ❌ غير منفذ | Domain model أولي فقط |
 | Fees/payments/receipts | ❌ غير منفذ | Domain types أولية فقط |
 | Expenses/client trust | ❌ غير منفذ | Domain types أولية فقط |
-| Offline database/sync | ❌ غير منفذ | لا توجد queue/conflict engine |
-| Audit log | ❌ غير منفذ | غير مربوط |
+| Offline database/sync | ❌ غير منفذ | لا توجد queue/conflict engine؛ العملاء والقضايا تحتاج اتصالاً، ومسار القضية محلي فقط |
+| Audit log | 🟡 جزئي | triggers في القاعدة تسجل إنشاء وتعديل العملاء والقضايا في `audit_logs` (مختبر)؛ لا توجد شاشة |
 | Notarization | ❌ غير منفذ | غير منفذ |
 | Legal library/templates | ❌ غير منفذ | غير منفذ |
 | AI assistant | ❌ غير منفذ | مؤجل عمداً حتى استقرار البيانات والمكتبة |
 | Subscriptions | ❌ غير منفذ | غير منفذ |
 | WhatsApp integration | ❌ غير منفذ | غير منفذ |
-| Automated tests | 🟡 جزئي | Domain/auth/storage tests + اختبار RLS في SQL؛ لا يوجد E2E/offline suite |
+| Automated tests | 🟡 جزئي | Domain/auth/storage/repository tests + اختبارات RLS في SQL + فحص E2E محلي للعملاء والقضايا (`supabase/tests/local/e2e`)؛ لا يوجد offline suite ولا CI للقاعدة |
 
-**التقييم الحالي:** الأساس البصري وDomain foundation جيدان، وSupabase Auth والأدوار منفذة في المرحلة 1. لكن بيانات العمل الأساسية (Clients/Matters/Dashboard) ما زالت محلية على الجهاز أو Mock وليست production persistence. الأولوية الآن ليست إضافة شاشات كثيرة؛ الأولوية هي تحويل الأساس إلى multi-tenant Supabase architecture آمنة ثم ربط الصفحات الموجودة بها.
+**التقييم الحالي:** Supabase Auth والأدوار منفذة في المرحلة 1، والعملاء والقضايا أصبحت على Supabase في المرحلة 2 (RLS هو الحماية الفعلية). ما زال مسار القضية (المواعيد والمستندات والأتعاب والإيصالات والمصروفات والمراحل) محلياً على الجهاز، ولا توجد مزامنة أو عمل دون اتصال. الأولوية التالية نقل مسار القضية إلى جداول Supabase المقابلة ثم بناء طبقة offline/sync.
 
 ---
 
@@ -47,20 +47,33 @@
 - `apps/mobile/app/_layout.tsx` + `src/auth/AuthProvider.tsx`: RouteGuard يوجّه حسب الدور. استعادة الجلسة عند التشغيل محدودة بـ 10 ثوانٍ عبر `src/lib/settleWithin.ts`؛ أي فشل في التخزين أو session تالف أو انتظار أطول يوجّه إلى `/login` بدلاً من تعليق شاشة البداية.
 - `apps/mobile/app/(auth)/login.tsx`: دخول برقم الهاتف (يتحول إلى بريد داخلي) عبر `signInWithPassword`.
 - `supabase/migrations/2026092817*` + `supabase/functions/manage-users/` + `supabase/tests/phase1_access.sql`: الأدوار وRLS وإنشاء الحسابات من الخادم (المرحلة 1).
-- `apps/mobile/src/data/repositories.ts` + `localRepositories.ts` + `vault.ts`: Clients وMatters في مساحة محلية مشفّرة لكل مستخدم على الجهاز؛ ليست على الخادم بعد.
-- `apps/mobile/src/data/mockDashboardRepository.ts`: ملخص Dashboard ما زال تجريبياً.
-- `apps/mobile/app/(tabs)/calendar.tsx`: مواعيد القضايا من المساحة المحلية.
+- `apps/mobile/src/data/repositories.ts`: نقطة الوصول الوحيدة للبيانات من الشاشات. `clientRepository` و`matterRepository` من `src/data/supabase/` (Supabase مع أنواع مولّدة في `src/lib/database.types.ts` وأخطاء عربية في `errors.ts`)؛ لا تستدعي شاشات العملاء والقضايا Supabase مباشرة.
+- `apps/mobile/src/data/localStore.ts` + `localRepositories.ts` + `vault.ts`: مسار كل قضية وإعدادات المكتب في مساحة محلية مشفّرة لكل مستخدم، مفهرسة بمعرّف القضية على الخادم. كل كتابة فيها تقرأ القضية من الخادم أولاً (الوجود والصلاحية والحالة)، وإغلاق القضية يغيّر حالتها على الخادم أولاً.
+- `apps/mobile/src/data/dashboard.ts`: ملخص Dashboard من بيانات حقيقية (الأعداد من الخادم، والباقي من الجهاز).
+- `apps/mobile/app/(tabs)/calendar.tsx`: القضايا من الخادم ومواعيدها من الجهاز.
+- `supabase/migrations/20260929081219_phase2_clients_matters.sql` + `supabase/tests/phase2_clients_matters.sql`: عقد المرحلة 2 واختبار العزل والصلاحيات.
 - `packages/domain/src/index.ts`: نماذج أولية جيدة لـOffice/User/Client/Matter/Workflow/Session/Deadline/Document/Fees/Payment/Receipt/Expense/Trust.
 - `packages/domain/src/clientsMatters.ts`: Arabic normalization/search + validation للقضايا والعملاء.
 - `packages/domain/src/clientsMatters.test.ts`: اختبارات Domain موجودة للعملاء والقضايا.
 - `packages/ui/src/theme.ts`: Design tokens وRTL foundation موجودان.
 - `docs/ui-visual-spec.md`: Visual lock موثق.
 
+### معمارية البيانات بعد المرحلة 2
+
+- **مصدر حقيقة واحد لكل نوع بيانات:** العملاء والقضايا وأطرافها في Supabase فقط. مسار القضية وإعدادات المكتب على الجهاز فقط (مفهرسة بمعرّف القضية على الخادم). لا توجد نسختان متنافستان من البيانات نفسها.
+- **المكتب يحدده الخادم:** المستودعات لا ترسل `office_id`؛ القيمة الافتراضية للعمود وRLS تأخذانه من جلسة المستخدم. `OFFICE_ID` في `src/data/ids.ts` مجرد وسيط لواجهات الـDomain ولا يُستخدم في الاستعلامات.
+- **بلا حذف:** العملاء والقضايا تُؤرشف بتغيير الحالة، ولا توجد أي عملية `delete` في مستودعات التطبيق.
+- **المعرّفات UUID من الجهاز** (`expo-crypto`) فتبقى ثابتة قبل الحفظ وبعده، وتصلح لطبقة مزامنة لاحقة.
+- **دون اتصال:** لا يعمل إنشاء العملاء والقضايا أو قراءتها دون اتصال (تظهر رسالة اتصال عربية). واجهات `ClientRepository`/`MatterRepository` في `packages/domain` مستقلة عن Supabase، فيمكن لاحقاً وضع طبقة offline/sync خلفها دون تغيير الشاشات.
+- **بيانات الجهاز القديمة:** مساحات الإصدار 1 (قبل المرحلة 2) التي كانت تحفظ العملاء والقضايا محلياً تُرقّى إلى الإصدار 2؛ تُحفظ سجلاتها القديمة مشفّرة كما هي تحت `legacy` دون عرض أو مزامنة، ولا تُستورد تلقائياً إلى الخادم.
+
 ### فجوة يجب إصلاحها
 
 الـREADME القديم كان يقول إن المصادقة غير منفذة، بينما الكود الحالي يحتوي Supabase Auth فعلي. لذلك هذا الملف يجب أن يتغير دائماً مع التنفيذ ولا يُترك خلف الكود.
 
-**Migrations متطابقة مع قاعدة البيانات:** تمت استعادة migrations الست الأساسية المفقودة من سجل Supabase المطبق، وتصحيح أرقام إصدارات migrations المرحلة 1 لتطابق سجل القاعدة. يجب التحقق من replay على قاعدة جديدة قبل بدء نقل Clients/Matters إلى Supabase.
+**Migrations متطابقة مع قاعدة البيانات:** تمت استعادة migrations الست الأساسية المفقودة من سجل Supabase المطبق، وتصحيح أرقام إصدارات migrations المرحلة 1 لتطابق سجل القاعدة. تم التحقق (2026-09-29) من أن الملفات الإحدى عشرة مطابقة حرفياً لسجل المشروع، ومن replay كامل بالترتيب على PostgreSQL 17 نظيفة باستخدام `supabase/tests/local/supabase_stub.sql`، مع نجاح اختباري RLS على النسخة المحلية وعلى المشروع.
+
+**قرارات منتج معلّقة (السودان) — لم يُغيَّر فيها شيء:** المكاتب المنشأة من التطبيق (`svc_create_office`) تأخذ `SD` و`SDG` و`Africa/Khartoum`، لكن القيم الافتراضية للأعمدة في المخطط الأساسي ما زالت كويتية (`offices.country = 'KW'`، `KWD` للمكتب والمدفوعات، `Asia/Kuwait`)، وسنة ترقيم القضايا `next_matter_number` تُحسب بتوقيت `Asia/Kuwait`، ويوجد قيد الرقم المدني الكويتي (12 رقماً عند `id_type = 'civil_id'`) ووسيلة الدفع `knet`. حقل «الرقم الوطني» يُحفظ الآن بنوع `national_id` دون دولة ودون صيغة محددة إلى أن يُعتمد نوع الهوية السودانية وصيغتها.
 
 ---
 
@@ -122,41 +135,44 @@
 
 **Gate:** User من Office A لا يستطيع قراءة/تعديل Office B بأي API call.
 
-## Phase 2 — Clients: تحويل الموجود من Mock إلى Supabase — ⬜
+## Phase 2 — Clients: تحويل الموجود من Mock إلى Supabase — 🟡 جاري
 
 - [x] List UI
 - [x] Create/Edit form UI
 - [x] Arabic search/filter logic
 - [x] Validation foundation
 - [x] Client Profile route/UI foundation
-- [ ] Supabase ClientRepository
-- [ ] إزالة الاعتماد على mockRepository في production path
-- [ ] RLS
-- [ ] duplicate detection: phone / national ID / similar name
-- [ ] matters relationship
+- [x] Supabase ClientRepository (`src/data/supabase/clientRepository.ts`)
+- [x] إزالة الاعتماد على mockRepository في production path
+- [x] RLS (سياسات المرحلة 1 + قيد الاستقبال على بيانات التواصل؛ `phase2_clients_matters.sql` + E2E محلي)
+- [x] أرشفة واستعادة بالحالة بدلاً من الحذف
+- [ ] duplicate detection: phone / national ID / similar name — رقم الهوية فقط (فهرس فريد لكل مكتب في القاعدة مع رسالة عربية)؛ الهاتف والاسم المشابه غير منفذين
+- [x] matters relationship (العميل الأساسي `matters.client_id` والعملاء الإضافيون `matter_parties.client_id`، والاسم يُقرأ دائماً من سجل العميل)
 - [ ] receipts/documents/communications sections من بيانات حقيقية
 - [ ] offline create/edit
 - [ ] sync
-- [ ] UI + integration tests
+- [ ] UI + integration tests — repository/mapper unit tests + E2E محلي (15 سيناريو) موجودة؛ لا اختبارات على جهاز حقيقي ولا CI
 
 **Gate:** Create → DB → reopen app → data persists → edit → search → permissions → offline/sync pass.
 
-## Phase 3 — Matters Core — ⬜
+حالة الـGate: كل الخطوات تنجح (E2E محلي) **ما عدا offline/sync** غير المنفذ، لذلك المرحلة ليست ✅.
+
+## Phase 3 — Matters Core — 🟡 جاري
 
 - [x] Matter domain model foundation
 - [x] List UI
 - [x] New Matter multi-step form
 - [x] Arabic search/filter/sort
 - [x] type-specific field foundation
-- [ ] Supabase MatterRepository
-- [ ] matter_clients / matter_parties
-- [ ] assignments
-- [ ] Matter Details screen
+- [x] Supabase MatterRepository (`src/data/supabase/matterRepository.ts`؛ الحفظ عبر `save_matter` في معاملة واحدة بصلاحيات المستخدم)
+- [x] matter_clients / matter_parties (طرف إما عميل مسجل عبر FK أو اسم مكتوب، والعميل مرة واحدة لكل قضية)
+- [x] assignments — محامٍ مسؤول واحد؛ المحامي يسند قضاياه الجديدة لنفسه، وتغيير الإسناد للمدير فقط (مفروض في القاعدة)
+- [x] Matter Details screen — بيانات القضية من الخادم؛ الأقسام التابعة للمسار من الجهاز
 - [ ] fixed Matter Header
 - [ ] tabs: Overview / Workflow / Sessions / Documents / Fees / References / Drafts / Notes / Activity
-- [ ] edit/archive
+- [x] edit/archive (`/matters/[id]/edit`؛ الإغلاق من مسار القضية بعد فحص المواعيد والمراحل، والأرشفة للقضايا المغلقة)
 - [ ] conflict check before accepting a matter
-- [ ] RLS
+- [x] RLS (مختبر في SQL وE2E: المكتب ب لا يرى ولا يعدّل ولا يربط قضايا وعملاء المكتب أ)
 - [ ] offline/sync
 - [ ] integration tests
 
@@ -341,7 +357,7 @@
 
 ## Phase 16 — Dashboard, Reporting & Production Hardening — ⬜
 
-- [ ] replace mockDashboardRepository
+- [x] replace mockDashboardRepository (أعداد من الخادم؛ الأقسام المحلية موضّحة في الشاشة)
 - [ ] action-oriented dashboard from real data
 - [ ] global search
 - [ ] financial/basic/advanced reports
@@ -366,13 +382,13 @@
 
 ## اختبارات الربط الإلزامية
 
-1. Client → Matter → يظهر الملف عند العميل ويظهر العميل في الملف.
+1. Client → Matter → يظهر الملف عند العميل ويظهر العميل في الملف. (المرحلة 2: ينجح في E2E المحلي)
 2. Matter → Session → Calendar → Dashboard → Client timeline.
 3. Matter → Payment → totals → Receipt → Client + Matter + Dashboard.
 4. Matter → Expense → Trust ledger → Statement.
 5. Matter → Document offline → reconnect → Storage → Matter Documents.
 6. Police → Prosecution → Court مع بقاء التاريخ والأرقام السابقة.
-7. Office A → محاولة قراءة Office B = DENIED.
+7. Office A → محاولة قراءة Office B = DENIED. (العملاء والقضايا: ينجح في SQL وE2E المحلي)
 8. Trainee/Reception → محاولة فتح financial/confidential data حسب permission = DENIED.
 9. Receipt issued → delete attempt = DENIED; cancellation preserves sequence.
 10. Offline duplicate sync / repeated payment tap = no duplicate financial record.
@@ -440,6 +456,8 @@ pnpm test
 pnpm build
 ```
 
+قاعدة البيانات: شغّل `supabase/tests/phase1_access.sql` و`supabase/tests/phase2_clients_matters.sql` في SQL editor بعد أي تغيير في الصلاحيات (كل منهما يتراجع عن بياناته ويطبع النتيجة). الفحص الشامل المحلي للتطبيق مع القاعدة: [`supabase/tests/local/e2e`](supabase/tests/local/e2e/README.md).
+
 ## بنية المستودع
 
 - `apps/mobile`: تطبيق Expo الأساسي.
@@ -452,4 +470,4 @@ pnpm build
 
 ## ملاحظة أمان
 
-رغم أن Supabase Auth متصل، **لا تعتبر التطبيق جاهزاً لبيانات موكلين حقيقية بعد**. يجب أولاً إكمال multi-tenancy وRLS وStorage policies وoffline/security testing الموضحة أعلاه.
+رغم أن Supabase Auth متصل وأن العملاء والقضايا محمية بـRLS، **لا تعتبر التطبيق جاهزاً لبيانات موكلين حقيقية بعد**: مسار القضية والمستندات والأتعاب ما زالت على الجهاز فقط، ويجب إكمال Storage policies وoffline/security testing، وتعطيل التسجيل العام في Supabase Auth، واعتماد قرارات السودان المعلّقة أعلاه.
