@@ -1,4 +1,5 @@
 import type { Client, ClientStatus, Matter, MatterStatus, MatterType } from "./index";
+import { normalizePhone } from "./phone";
 export const clientKinds = { PERSON: "فرد", ORGANIZATION: "شركة / مؤسسة" };
 export const clientStatuses: Record<ClientStatus, string> = {
   ACTIVE: "نشط",
@@ -98,13 +99,10 @@ export function validateClient(c: Client): FieldErrors {
   const e: FieldErrors = {};
   if (!c.displayName.trim()) e.displayName = "الاسم مطلوب";
   if (!Object.hasOwn(clientKinds, c.kind)) e.kind = "اختر نوع العميل";
+  // Phone numbers are Sudanese only (+249); the database enforces the same rule.
   for (const key of ["phone", "whatsapp"] as const) {
     if (!c[key]?.trim()) e[key] = "الرقم مطلوب";
-    else if (
-      !/^\+?[\d\s()-]{7,25}$/.test(normalizeArabic(c[key]!)) ||
-      !/^\d{7,15}$/.test(normalizeArabic(c[key]!).replace(/\D/g, ""))
-    )
-      e[key] = "أدخل رقماً صحيحاً";
+    else if (!normalizePhone(c[key]!)) e[key] = "أدخل رقم هاتف سودانياً صحيحاً";
   }
   if (c.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email))
     e.email = "البريد الإلكتروني غير صحيح";

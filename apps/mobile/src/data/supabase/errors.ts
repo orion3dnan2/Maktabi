@@ -47,7 +47,7 @@ const specific: [RegExp, RepositoryErrorKind, string][] = [
   [/matter_parties_client_or_name/i, 'invalid', 'بيانات أحد أطراف القضية غير مكتملة.'],
   [/clients_national_id_digits/i, 'invalid', 'الرقم الوطني أرقام فقط.'],
   [/clients_identity_complete/i, 'invalid', 'رقم الهوية غير صحيح.'],
-  [/clients_(phone|secondary_phone|whatsapp)_check/i, 'invalid', 'رقم الهاتف غير صحيح.'],
+  [/(clients|offices|profiles)_(phone|secondary_phone|whatsapp)_check/i, 'invalid', 'أدخل رقم هاتف سودانياً صحيحاً (+249).'],
   [/clients_email_check/i, 'invalid', 'البريد الإلكتروني غير صحيح.'],
   [/matters_closed_dates/i, 'invalid', 'تاريخ الإغلاق لا يسبق تاريخ فتح القضية.'],
   [/_pkey/i, 'duplicate', 'هذا السجل مستخدم في مكان آخر؛ أعد فتح الصفحة ثم حاول مجدداً.'],

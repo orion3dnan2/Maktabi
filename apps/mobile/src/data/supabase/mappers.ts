@@ -1,4 +1,4 @@
-import type { Client, ClientStatus, Matter, MatterParty, MatterStatus, MatterType } from '@maktabi/domain';
+import { normalizePhone, type Client, type ClientStatus, type Matter, type MatterParty, type MatterStatus, type MatterType } from '@maktabi/domain';
 import type { Database, Json } from '@/lib/database.types';
 import { isUuid } from '../ids';
 
@@ -33,7 +33,8 @@ export const asciiDigits = (value: string) =>
   value.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660)).replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
 
 const text = (value: string | undefined) => { const trimmed = value?.trim(); return trimmed ? trimmed : null; };
-const phone = (value: string | undefined) => { const trimmed = text(value); return trimmed ? asciiDigits(trimmed).replace(/\s+/g, ' ') : null; };
+// Stored as E.164 (+249 and 9 digits); anything else is left as typed so the database check rejects it.
+const phone = (value: string | undefined) => { const trimmed = text(value); return trimmed ? normalizePhone(trimmed) ?? trimmed : null; };
 const optional = (value: string | null) => value ?? undefined;
 
 export function clientFromRow(row: ClientRow): Client {

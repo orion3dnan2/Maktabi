@@ -95,7 +95,7 @@ async function scenario(name, context, steps) {
     await page.waitForURL(/\/clients\/[0-9a-f-]{36}$/, { timeout: 20000 });
     ids.org = page.url().split('/').pop();
     const rows = sql(`select c.full_name, c.client_type, c.phone, c.whatsapp, coalesce(c.civil_id,''), coalesce(c.id_type::text,''), o.name from clients c join offices o on o.id = c.office_id order by c.created_at`);
-    if (!rows.includes('أمجد الطيب عثمان|individual|+249 912 000 001|+249912000001|1234567|national_id|Office A')) throw new Error(`unexpected client rows: ${rows}`);
+    if (!rows.includes('أمجد الطيب عثمان|individual|+249912000001|+249912000001|1234567|national_id|Office A')) throw new Error(`unexpected client rows: ${rows}`);
     if (!rows.includes('شركة روافد السهول|organization|+249912000002|+249912000002|||Office A')) throw new Error(`unexpected client rows: ${rows}`);
     return { ids: { ...ids }, db: rows.split('\n') };
   });
@@ -237,12 +237,16 @@ async function scenario(name, context, steps) {
     return { officeBClients: sql(`select c.full_name || '@' || o.name from clients c join offices o on o.id = c.office_id where o.name = 'Office B'`) };
   });
 
-  await scenario('12. national number: letters refused, a duplicate in the same office shows an Arabic error', deviceA, async (page) => {
+  await scenario('12. foreign phone and national number with letters refused; a duplicate in the same office shows an Arabic error', deviceA, async (page) => {
     await login(page, 'adminA');
     await nav(page, `/clients/new`);
     await field(page, 'الاسم الكامل *').fill('عميل مكرر');
-    await field(page, 'رقم الهاتف *').fill('+249914000001');
+    // Phone numbers are Sudanese only.
+    await field(page, 'رقم الهاتف *').fill('+965 5132 5559');
     await field(page, 'رقم واتساب *').fill('+249914000001');
+    await button(page, 'حفظ العميل').click();
+    await text(page, 'أدخل رقم هاتف سودانياً صحيحاً').waitFor({ timeout: 20000 });
+    await field(page, 'رقم الهاتف *').fill('0914000001');
     // The Sudanese national number is digits only.
     await field(page, 'الرقم الوطني (اختياري)').fill('AB-123');
     await button(page, 'حفظ العميل').click();

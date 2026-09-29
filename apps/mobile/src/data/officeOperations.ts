@@ -1,4 +1,4 @@
-import { validDate, type Matter } from '@maktabi/domain';
+import { normalizePhone, validDate, type Matter } from '@maktabi/domain';
 import { builtinProcedures, expenseCategories, type CaseDeadline, type ExpenseEntry, type FeeInstallment, type OfficeData, type OfficeSettings, type ProcedureStage, type ProcedureTemplate, type TrustDeposit } from './office';
 import { paidTotal, trustBalance, type MatterWorkflow, type WorkflowReceipt } from './workflow';
 import { serviceRequirements, type ReadinessSubmission } from './readiness';
@@ -29,7 +29,9 @@ export function createOfficeOperations(c: OfficeContext) {
     async getSettings() { return copy(c.get().settings); },
     async saveSettings(settings: OfficeSettings) {
       if (!settings.name.trim() || !/^[A-Za-z0-9_-]{1,12}$/.test(settings.receiptPrefix) || !Number.isSafeInteger(settings.trustLowBalance) || settings.trustLowBalance < 0) throw new Error('تحقق من اسم المكتب وبادئة الترقيم وحد الأمانة');
-      const office = c.get(); office.settings = copy(settings); c.set(office);
+      const phone = settings.phone.trim() ? normalizePhone(settings.phone) : '';
+      if (phone === null) throw new Error('هاتف المكتب يجب أن يكون رقم هاتف سودانياً صحيحاً');
+      const office = c.get(); office.settings = { ...copy(settings), phone }; c.set(office);
     },
     async listTemplates() { return copy([...builtinProcedures, ...c.get().templates]); },
     async saveTemplate(template: ProcedureTemplate) {

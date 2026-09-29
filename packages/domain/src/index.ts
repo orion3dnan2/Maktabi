@@ -46,3 +46,4 @@ export function cancelReceipt(receipt: Receipt, cancelledAt: ISODateTime, reason
 }
 
 export * from './clientsMatters';
+export * from './phone';

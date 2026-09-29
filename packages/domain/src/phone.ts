@@ -1,8 +1,7 @@
-// Phone numbers are the login identifier. Supabase Auth has no SMS provider in
-// this project, so every account is stored as an email derived from the
-// normalised number. Maktabi is Sudan-only: every number is Sudanese (+249).
-// KEEP IN SYNC with packages/domain/src/phone.ts, which the app uses (a test in
-// apps/mobile/src/auth/phone.test.ts checks that both copies are identical).
+// Maktabi is Sudan-only: every phone number is Sudanese and is stored in E.164 form,
+// +249 followed by 9 digits. KEEP normalizePhone IN SYNC with
+// supabase/functions/manage-users/phone.ts: accounts are created there and signed into
+// from the app, so both must produce the same number (a test compares the two).
 
 const EASTERN_DIGITS = /[٠-٩۰-۹]/g;
 
@@ -23,6 +22,3 @@ export function normalizePhone(input: string): string | null {
   }
   return /^249[1-9]\d{8}$/.test(digits) ? `+${digits}` : null;
 }
-
-/** The Supabase Auth email for a normalised phone. `.invalid` (RFC 2606) can never receive mail. */
-export const phoneLoginEmail = (e164: string) => `p${e164.slice(1)}@phone.maktabi.invalid`;

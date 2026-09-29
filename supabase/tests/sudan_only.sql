@@ -1,5 +1,5 @@
--- Sudan-only defaults regression test. Run after changes to offices, clients identity,
--- payments or office numbering. One DO block ending in RAISE, so everything is rolled back.
+-- Sudan-only regression test (defaults, national number, phone numbers). Run after changes to
+-- offices, clients identity or phones, profiles phones, payments or office numbering. One DO block ending in RAISE, so everything is rolled back.
 -- Every check prints "name=ok"; the last entry is "failures=N" (expected: failures=0).
 do $test$
 declare
@@ -53,6 +53,23 @@ begin
     insert into public.clients (office_id, full_name, id_type, civil_id) values (o, 'جواز', 'passport', 'P01234567');
     r := r || 'passportLetters=ok; ';
   exception when others then r := r || 'passportLetters=FAIL(' || sqlerrm || '); '; fails := fails + 1; end;
+
+  -- phone numbers are Sudanese only, stored as +249 and 9 digits
+  begin
+    insert into public.clients (office_id, full_name, phone, whatsapp) values (o, 'هاتف سوداني', '+249912345678', '+249123456789');
+    r := r || 'sudanesePhone=ok; ';
+  exception when others then r := r || 'sudanesePhone=FAIL(' || sqlerrm || '); '; fails := fails + 1; end;
+  foreach v in array array['+96551325559', '0912345678', '+249 912 345 678', '+249012345678', '+2499123456789'] loop
+    begin
+      insert into public.clients (office_id, full_name, whatsapp) values (o, 'هاتف خاطئ', v);
+      r := r || 'phoneRejects(' || v || ')=FAIL(allowed); '; fails := fails + 1;
+    exception when check_violation then r := r || 'phoneRejects(' || v || ')=ok; ';
+    end;
+  end loop;
+  begin update public.offices set phone = '+96551325559' where id = o; r := r || 'officePhoneForeign=FAIL(allowed); '; fails := fails + 1;
+  exception when check_violation then r := r || 'officePhoneForeign=ok; '; end;
+  begin update public.profiles set phone = '+96551325559' where id = u_admin; r := r || 'profilePhoneForeign=FAIL(allowed); '; fails := fails + 1;
+  exception when check_violation then r := r || 'profilePhoneForeign=ok; '; end;
 
   -- payments default to the Sudanese pound, take two decimals and accept bankak
   insert into public.clients (office_id, full_name) values (o, 'دافع') returning id into c;
