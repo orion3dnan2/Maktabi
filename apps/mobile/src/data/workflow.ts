@@ -16,6 +16,8 @@ export interface MatterWorkflow {
   installments: FeeInstallment[];
   expenses: ExpenseEntry[];
   deposits: TrustDeposit[];
+  /** The procedure stage last started or finished (or the latest note while no procedure is set). */
+  currentStage?: string;
 }
 export const emptyWorkflow = (): MatterWorkflow => ({ agreedFees: 0, receipts: [], documents: [], appointments: [], notes: [], activity: [], stages: [], deadlines: [], installments: [], expenses: [], deposits: [] });
 export const paidTotal = (w: MatterWorkflow) => w.receipts.reduce((sum, r) => sum + (r.status === 'CANCELLED' ? 0 : r.amount), 0);

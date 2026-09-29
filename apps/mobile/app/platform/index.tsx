@@ -20,7 +20,8 @@ export default function PlatformScreen() {
   const offices = useResource(useCallback(async () => {
     const { data, error } = await supabase.rpc('platform_list_offices');
     if (error) throw error;
-    return (data ?? []) as OfficeRow[];
+    // admins is a JSON column in the generated types; its shape is fixed by platform_list_offices().
+    return (data ?? []) as unknown as OfficeRow[];
   }, []));
   const [form, setForm] = useState(empty); const [created, setCreated] = useState('');
   const op = useOperation(offices.reload);

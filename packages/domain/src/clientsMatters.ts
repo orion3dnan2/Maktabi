@@ -1,5 +1,10 @@
-import type { Client, Matter, MatterStatus, MatterType } from "./index";
+import type { Client, ClientStatus, Matter, MatterStatus, MatterType } from "./index";
 export const clientKinds = { PERSON: "فرد", ORGANIZATION: "شركة / مؤسسة" };
+export const clientStatuses: Record<ClientStatus, string> = {
+  ACTIVE: "نشط",
+  INACTIVE: "غير نشط",
+  ARCHIVED: "مؤرشف",
+};
 export const matterTypes: Record<MatterType, string> = {
   CRIMINAL: "جنائية",
   CIVIL: "مدنية",
@@ -103,6 +108,10 @@ export function validateClient(c: Client): FieldErrors {
   }
   if (c.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email))
     e.email = "البريد الإلكتروني غير صحيح";
+  // Mirrors the database rule for identity numbers (clients_identity_complete).
+  const nationalId = c.nationalId?.trim() ?? "";
+  if (nationalId && (nationalId.length < 3 || nationalId.length > 50))
+    e.nationalId = "الرقم الوطني من 3 إلى 50 حرفاً";
   if (c.kind === "ORGANIZATION")
     for (const key of ["contactPerson", "email", "address"] as const)
       if (!c[key]?.trim()) e[key] = "هذا الحقل مطلوب للشركة";
@@ -119,6 +128,8 @@ export function validateMatter(m: Matter): FieldErrors {
   const e: FieldErrors = {};
   for (const key of ["reference", "title", "authority"] as const)
     if (!m[key]?.trim()) e[key] = "هذا الحقل مطلوب";
+  // Mirrors the database limit on matters.matter_number.
+  if (m.reference.trim().length > 50) e.reference = "رقم الملف لا يتجاوز 50 حرفاً";
   if (!Object.hasOwn(matterTypes, m.type)) e.type = "اختر نوع الملف";
   if (!Object.hasOwn(matterStatuses, m.status)) e.status = "اختر حالة الملف";
   if (!validDate(m.openedAt))
