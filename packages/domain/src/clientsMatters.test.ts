@@ -250,3 +250,15 @@ describe("matter filtering and ordering", () => {
     expect(source[0]?.id).toBe("m1");
   });
 });
+describe("limits shared with the database", () => {
+  it("accepts a national number of 3 to 50 characters, like clients_identity_complete", () => {
+    expect(validateClient({ ...client, nationalId: "123" })).toEqual({});
+    expect(validateClient({ ...client, nationalId: "12" }).nationalId).toBeTruthy();
+    expect(validateClient({ ...client, nationalId: "x".repeat(51) }).nationalId).toBeTruthy();
+    expect(validateClient({ ...client, nationalId: "  " })).toEqual({});
+  });
+  it("limits the matter reference to 50 characters, like matters.matter_number", () => {
+    expect(validateMatter({ ...matter, reference: "x".repeat(50) })).toEqual({});
+    expect(validateMatter({ ...matter, reference: "x".repeat(51) }).reference).toBeTruthy();
+  });
+});
