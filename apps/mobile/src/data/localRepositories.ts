@@ -1,15 +1,15 @@
-import { createLocalStore, type MatterSource } from './localStore';
+import { createLocalStore, type MatterSource, type StageSource } from './localStore';
 
 export interface LocalStorage { getItem(key: string): Promise<string | null>; setItem(key: string, value: string): Promise<void> }
 export const STORAGE_KEY = 'maktabi:office-1:v1';
 
 /**
  * The device-local store with durable storage. Writes are serialized and memory is rolled back
- * if durable storage fails, so reads never see half a write. Matters themselves come from `matters`
- * (Supabase in the app).
+ * if durable storage fails, so reads never see half a write. Matters and their procedure stages
+ * come from `matters` and `stages` (Supabase in the app).
  */
-export function createLocalRepositories(storage: LocalStorage, matters: MatterSource) {
-  const core = createLocalStore(matters);
+export function createLocalRepositories(storage: LocalStorage, matters: MatterSource, stages: StageSource) {
+  const core = createLocalStore(matters, stages);
   let loading: Promise<void> | undefined;
   let queue = Promise.resolve();
   const ready = () => loading ??= storage.getItem(STORAGE_KEY).then((raw) => {
@@ -44,6 +44,5 @@ export function createLocalRepositories(storage: LocalStorage, matters: MatterSo
     profileRepository: persistent(core.profileRepository),
     workflowRepository: persistent(core.workflowRepository),
     officeRepository: persistent(core.officeRepository),
-    progress: read(core.progress),
   };
 }

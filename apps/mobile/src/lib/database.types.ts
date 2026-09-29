@@ -1,6 +1,6 @@
 // Generated from the live Supabase schema (project ngckrfvsjggpnaddivyq) with the Supabase
-// type generator after migration 20260929093954_sudan_only_defaults. Do not edit by hand:
-// regenerate after every migration.
+// type generator after migration 20260929111235_matter_workflow_stages_deadlines_notes.
+// Do not edit by hand: regenerate after every migration.
 export type Json =
   | string
   | number
@@ -30,7 +30,9 @@ export type Database = {
           location: string | null
           matter_id: string | null
           office_id: string
+          outcome: string | null
           reminder_at: string | null
+          stage_id: string | null
           starts_at: string
           status: Database["public"]["Enums"]["appointment_status"]
           title: string
@@ -48,7 +50,9 @@ export type Database = {
           location?: string | null
           matter_id?: string | null
           office_id?: string
+          outcome?: string | null
           reminder_at?: string | null
+          stage_id?: string | null
           starts_at: string
           status?: Database["public"]["Enums"]["appointment_status"]
           title: string
@@ -66,7 +70,9 @@ export type Database = {
           location?: string | null
           matter_id?: string | null
           office_id?: string
+          outcome?: string | null
           reminder_at?: string | null
+          stage_id?: string | null
           starts_at?: string
           status?: Database["public"]["Enums"]["appointment_status"]
           title?: string
@@ -107,6 +113,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "offices"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_stage_fk"
+            columns: ["office_id", "matter_id", "stage_id"]
+            isOneToOne: false
+            referencedRelation: "matter_stages"
+            referencedColumns: ["office_id", "matter_id", "id"]
           },
         ]
       }
@@ -315,6 +328,171 @@ export type Database = {
           },
         ]
       }
+      matter_deadlines: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string | null
+          due_at: string
+          id: string
+          legal_basis: string
+          matter_id: string
+          office_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_at: string
+          id?: string
+          legal_basis: string
+          matter_id: string
+          office_id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_at?: string
+          id?: string
+          legal_basis?: string
+          matter_id?: string
+          office_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matter_deadlines_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matter_deadlines_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matter_deadlines_matter_fk"
+            columns: ["office_id", "matter_id"]
+            isOneToOne: false
+            referencedRelation: "matters"
+            referencedColumns: ["office_id", "id"]
+          },
+          {
+            foreignKeyName: "matter_deadlines_office_id_fkey"
+            columns: ["office_id"]
+            isOneToOne: false
+            referencedRelation: "offices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      matter_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          id: number
+          kind: string
+          matter_id: string
+          office_id: string
+          subject: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          id?: never
+          kind: string
+          matter_id: string
+          office_id: string
+          subject?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          id?: never
+          kind?: string
+          matter_id?: string
+          office_id?: string
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matter_events_matter_fk"
+            columns: ["office_id", "matter_id"]
+            isOneToOne: false
+            referencedRelation: "matters"
+            referencedColumns: ["office_id", "id"]
+          },
+          {
+            foreignKeyName: "matter_events_office_id_fkey"
+            columns: ["office_id"]
+            isOneToOne: false
+            referencedRelation: "offices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      matter_notes: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          id: string
+          matter_id: string
+          office_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          matter_id: string
+          office_id?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          matter_id?: string
+          office_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matter_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matter_notes_matter_fk"
+            columns: ["office_id", "matter_id"]
+            isOneToOne: false
+            referencedRelation: "matters"
+            referencedColumns: ["office_id", "id"]
+          },
+          {
+            foreignKeyName: "matter_notes_office_id_fkey"
+            columns: ["office_id"]
+            isOneToOne: false
+            referencedRelation: "offices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       matter_parties: {
         Row: {
           client_id: string | null
@@ -366,6 +544,97 @@ export type Database = {
           },
           {
             foreignKeyName: "matter_parties_office_id_fkey"
+            columns: ["office_id"]
+            isOneToOne: false
+            referencedRelation: "offices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      matter_stages: {
+        Row: {
+          authority: string
+          created_at: string
+          created_by: string | null
+          details: Json
+          document_ids: string[]
+          finished_at: string | null
+          id: string
+          matter_id: string
+          name: string
+          notes: string
+          office_id: string
+          position: number
+          procedure_name: string
+          reference: string
+          requirements: Json
+          skip_reason: string | null
+          stage_date: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["stage_status"]
+          updated_at: string
+        }
+        Insert: {
+          authority: string
+          created_at?: string
+          created_by?: string | null
+          details?: Json
+          document_ids?: string[]
+          finished_at?: string | null
+          id?: string
+          matter_id: string
+          name: string
+          notes?: string
+          office_id?: string
+          position: number
+          procedure_name: string
+          reference?: string
+          requirements?: Json
+          skip_reason?: string | null
+          stage_date?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["stage_status"]
+          updated_at?: string
+        }
+        Update: {
+          authority?: string
+          created_at?: string
+          created_by?: string | null
+          details?: Json
+          document_ids?: string[]
+          finished_at?: string | null
+          id?: string
+          matter_id?: string
+          name?: string
+          notes?: string
+          office_id?: string
+          position?: number
+          procedure_name?: string
+          reference?: string
+          requirements?: Json
+          skip_reason?: string | null
+          stage_date?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["stage_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matter_stages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matter_stages_matter_fk"
+            columns: ["office_id", "matter_id"]
+            isOneToOne: false
+            referencedRelation: "matters"
+            referencedColumns: ["office_id", "id"]
+          },
+          {
+            foreignKeyName: "matter_stages_office_id_fkey"
             columns: ["office_id"]
             isOneToOne: false
             referencedRelation: "offices"
@@ -596,6 +865,54 @@ export type Database = {
           },
         ]
       }
+      procedure_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          matter_types: Database["public"]["Enums"]["matter_type"][]
+          name: string
+          office_id: string
+          stages: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          matter_types: Database["public"]["Enums"]["matter_type"][]
+          name: string
+          office_id?: string
+          stages: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          matter_types?: Database["public"]["Enums"]["matter_type"][]
+          name?: string
+          office_id?: string
+          stages?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procedure_templates_office_id_fkey"
+            columns: ["office_id"]
+            isOneToOne: false
+            referencedRelation: "offices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -745,7 +1062,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      matter_progress: {
+        Row: {
+          current_stage: string | null
+          matter_id: string | null
+          next_event_at: string | null
+        }
+        Insert: {
+          current_stage?: never
+          matter_id?: string | null
+          next_event_at?: never
+        }
+        Update: {
+          current_stage?: never
+          matter_id?: string | null
+          next_event_at?: never
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_office_member: {
@@ -753,6 +1087,14 @@ export type Database = {
           p_email: string
           p_role: Database["public"]["Enums"]["app_role"]
         }
+        Returns: string
+      }
+      append_procedure: {
+        Args: { p_matter: string; p_name: string; p_stages: Json }
+        Returns: number
+      }
+      finish_session: {
+        Args: { p_appointment: string; p_next_at?: string; p_outcome: string }
         Returns: string
       }
       log_login_success: { Args: never; Returns: undefined }
@@ -782,6 +1124,10 @@ export type Database = {
       save_matter: {
         Args: { p_matter: Json; p_parties?: Json }
         Returns: string
+      }
+      save_stage: {
+        Args: { p_next_at?: string; p_stage: Json }
+        Returns: undefined
       }
       svc_actor_info: { Args: { p_actor: string }; Returns: Json }
       svc_add_member: {
@@ -905,6 +1251,7 @@ export type Database = {
         | "refund"
         | "other"
       priority_level: "low" | "normal" | "high" | "urgent"
+      stage_status: "pending" | "active" | "completed" | "skipped"
       task_status: "pending" | "in_progress" | "completed" | "cancelled"
     }
     CompositeTypes: {
@@ -1108,6 +1455,7 @@ export const Constants = {
         "other",
       ],
       priority_level: ["low", "normal", "high", "urgent"],
+      stage_status: ["pending", "active", "completed", "skipped"],
       task_status: ["pending", "in_progress", "completed", "cancelled"],
     },
   },

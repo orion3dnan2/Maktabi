@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, typography } from '@maktabi/ui';
 import { Chevron, HeroHeader, IconBubble, LuxeCard, row, rtl, SectionTitle, Sheet } from '@/components/luxe';
 import { useAuth } from '@/auth/AuthProvider';
+import { canUseMatters } from '@/auth/access';
 import { AccountCard } from '@/features/auth/AccountCard';
 export default function MoreScreen() {
   const router = useRouter(); const { access } = useAuth();
@@ -11,7 +12,7 @@ export default function MoreScreen() {
     { title: 'إعدادات المكتب', subtitle: 'بيانات المكتب والشعار والختم والإيصالات', icon: 'settings-outline' as const, path: '/office/settings' as const },
     { title: 'النسخ الاحتياطي', subtitle: 'تصدير واستعادة نسخة مشفرة من المكتب', icon: 'cloud-download-outline' as const, path: '/office/backup' as const },
     { title: 'متطلبات تفعيل المكتب', subtitle: 'المطلوب من مكتب المحامي لتشغيل الخدمات', icon: 'checkmark-done-outline' as const, path: '/office/readiness' as const },
-    { title: 'قوالب مسارات الإجراءات', subtitle: 'إنشاء وتخصيص مراحل العمل حسب نوع الملف', icon: 'git-branch-outline' as const, path: '/office/procedures' as const },
+    ...(canUseMatters(access) ? [{ title: 'قوالب مسارات الإجراءات', subtitle: 'إنشاء وتخصيص مراحل العمل حسب نوع الملف', icon: 'git-branch-outline' as const, path: '/office/procedures' as const }] : []),
     { title: 'إضافة قضية جديدة', subtitle: 'فتح ملف وتحديد الأطراف والمحكمة', icon: 'document-text-outline' as const, path: '/matters/new' as const },
     { title: 'إضافة عميل جديد', subtitle: 'بيانات التواصل والملف القانوني', icon: 'person-add-outline' as const, path: '/clients/new' as const },
     { title: 'جدول المواعيد', subtitle: 'الجلسات ومواعيد المتابعة', icon: 'calendar-outline' as const, path: '/(tabs)/calendar' as const },

@@ -8,12 +8,15 @@ export interface ProcedureStage {
   id: string; name: string; authority: string; reference: string; date: string; status: StageStatus;
   details: Record<string, string>; requirements: { title: string; done: boolean }[];
   documentIds: string[]; notes: string; nextAt?: string; completedAt?: string;
+  /** The procedure path the stage belongs to, and why it was skipped (server records). */
+  procedure?: string; skipReason?: string;
 }
 export interface CaseDeadline { id: string; title: string; dueAt: string; source: string; completed: boolean }
 export interface FeeInstallment { id: string; title: string; amount: number; dueDate: string; stageId?: string }
 export interface ExpenseEntry { id: string; date: string; category: string; amount: number; recipient: string; stageId?: string; billId?: string; source: 'TRUST' | 'RECEIVABLE'; voidReason?: string }
 export interface TrustDeposit { id: string; date: string; amount: number; description: string }
 export interface OfficeSettings { name: string; address: string; phone: string; receiver: string; receiptPrefix: string; logo?: Attachment; seal?: Attachment; trustLowBalance: number }
+/** Office data kept on the device. `templates` is only in snapshots written before templates moved to the server; it is not read. */
 export interface OfficeData { settings: OfficeSettings; templates: ProcedureTemplate[]; counters: Record<string, number>; readiness: ReadinessSubmission[] }
 export const defaultOffice = (): OfficeData => ({ settings: { name: 'مكتبي', address: '', phone: '', receiver: '', receiptPrefix: 'RC', trustLowBalance: 10000 }, templates: [], counters: {}, readiness: [] });
 const stages = (authority: string, names: string[], requirements: string[] = []) => names.map((name) => ({ name, authority, requirements }));

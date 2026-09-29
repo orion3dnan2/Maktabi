@@ -1,7 +1,12 @@
 import { normalizeArabic, validDate } from '@maktabi/domain';
 import type { CaseDeadline, ExpenseEntry, FeeInstallment, ProcedureStage, TrustDeposit } from './office';
 
-export interface Appointment { id: string; title: string; startsAt: string; status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED'; stageId?: string; outcome?: string }
+/** Chosen when scheduling; a stage's appointments are court sessions. */
+export type AppointmentKind = 'COURT_SESSION' | 'CLIENT_MEETING' | 'OTHER';
+export const appointmentKinds: { value: AppointmentKind; label: string }[] = [
+  { value: 'COURT_SESSION', label: 'جلسة محكمة' }, { value: 'CLIENT_MEETING', label: 'اجتماع مع الموكل' }, { value: 'OTHER', label: 'أخرى' },
+];
+export interface Appointment { id: string; title: string; startsAt: string; status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED'; kind: AppointmentKind; stageId?: string; outcome?: string }
 export interface Attachment { id: string; title: string; date: string; name: string; mimeType: string; dataUri: string; text?: string; stageId?: string }
 export interface WorkflowReceipt { id: string; number: string; amount: number; date: string; method: string; receiver?: string; balance?: number; proofId?: string; status?: 'ACTIVE' | 'CANCELLED'; cancellationReason?: string; cancelledAt?: string; replacesId?: string }
 export interface MatterWorkflow {
@@ -43,13 +48,10 @@ export const workflowStages = (w: MatterWorkflow) => [
   { label: 'الدفعة والإيصال', done: w.receipts.length > 0 },
   { label: 'ملاحظات المتابعة', done: w.notes.length > 0 },
 ];
-export interface WorkflowRepository {
+/** The parts of a matter's workflow still kept on the device: documents, fees and receipts. */
+export interface DeviceWorkflowRepository {
   getByMatter(id: string): Promise<MatterWorkflow>;
-  addAppointment(id: string, item: Omit<Appointment, 'id' | 'status'>): Promise<void>;
-  setAppointmentStatus(id: string, appointmentId: string, status: Appointment['status']): Promise<void>;
   setFees(id: string, amount: number): Promise<void>;
   recordPayment(id: string, receipt: WorkflowReceipt): Promise<void>;
   addDocument(id: string, document: Attachment): Promise<void>;
-  addNote(id: string, text: string): Promise<void>;
-  closeMatter(id: string): Promise<void>;
 }

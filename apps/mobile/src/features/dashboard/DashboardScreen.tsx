@@ -6,15 +6,19 @@ import { Chevron, HeroHeader, IconBubble, LuxeCard, row, rtl, SectionTitle, Shee
 import { useCallback } from 'react';
 import { useAuth } from '@/auth/AuthProvider';
 import { canUseMatters } from '@/auth/access';
-import { summarizeDashboard } from '@/data/dashboard';
+import { emptySources, summarizeDashboard } from '@/data/dashboard';
 import { clientRepository, matterRepository, OFFICE_ID, workflowRepository } from '@/data/repositories';
 import { money, useResource } from '../shared/hooks';
 
 const time = new Intl.DateTimeFormat('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true, numberingSystem: 'latn' });
 const load = async (withMatters: boolean) => {
-  const [clients, matters] = await Promise.all([clientRepository.count(), withMatters ? matterRepository.listByOffice(OFFICE_ID) : Promise.resolve([])]);
-  const entries = await Promise.all(matters.map(async (matter) => ({ matter, workflow: await workflowRepository.getByMatter(matter.id) })));
-  return summarizeDashboard(clients, entries);
+  if (!withMatters) return summarizeDashboard(emptySources(await clientRepository.count()));
+  const [clients, matters, sessions, deadlines, events] = await Promise.all([
+    clientRepository.count(), matterRepository.listByOffice(OFFICE_ID), workflowRepository.listScheduled(),
+    workflowRepository.listOpenDeadlines(), workflowRepository.listRecentEvents(8),
+  ]);
+  const finance = await Promise.all(matters.map(async (matter) => ({ matter, workflow: await workflowRepository.getOnDevice(matter.id) })));
+  return summarizeDashboard({ clients, matters, sessions, deadlines, events, finance });
 };
 
 function StatTile({ title, value, caption, icon, mc, dark, onPress }: { title: string; value: number; caption: string; icon: IonName | McName; mc?: boolean; dark?: boolean; onPress: () => void }) {

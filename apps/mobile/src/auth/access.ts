@@ -51,6 +51,8 @@ export function canOpen(a: Access, segments: string[]): boolean {
   if (first === '(auth)') return false;
   if (first === 'office' && second === 'team') return a.role === 'admin';
   if (first === 'matters') return canUseMatters(a);
+  // Procedure templates are readable and editable by the roles that work on matters (RLS).
+  if (first === 'office' && second === 'procedures') return canUseMatters(a);
   // Office workspace: (tabs), clients, matters, office/*
   return isStaff(a);
 }

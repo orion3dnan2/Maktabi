@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createLocalRepositories, STORAGE_KEY } from './localRepositories';
 import { appointmentISO, parseAmount } from './workflow';
-import { fakeMatterSource, serverMatter } from '../test/fakeMatters';
+import { fakeMatterSource, fakeStageSource, serverMatter } from '../test/fakeMatters';
 
 const clientId = 'workflow-client';
 const receipt = (id: string, amount: number) => ({ id, amount, number: `RC-${id}`, date: '2026-09-27T12:00:00Z', method: 'نقدي' });
@@ -11,25 +11,24 @@ function storageFixture() {
 }
 async function setup() {
   const f = storageFixture(); const server = fakeMatterSource([serverMatter('one', 'CIVIL', clientId), serverMatter('two', 'CIVIL', clientId)]);
-  const reload = () => createLocalRepositories(f.storage, server.source);
+  const reload = () => createLocalRepositories(f.storage, server.source, fakeStageSource());
   return { ...f, server, reload, r: reload() };
 }
-const progressOf = async (r: ReturnType<typeof createLocalRepositories>, server: ReturnType<typeof fakeMatterSource>, id: string) => (await r.progress([server.rows.get(id)!]))[0];
 
-describe('complete local client workflow', () => {
-  it('persists intake, linked case, appointment, document, fees, receipt and note across reload', async () => {
-    const { r, reload, server } = await setup(); const w = r.workflowRepository;
-    await w.addAppointment('one', { title: 'الجلسة الأولى', startsAt: '2026-10-05T09:30:00Z' });
+describe('the part of a matter workflow kept on the device', () => {
+  it('persists documents, fees and receipts across reload', async () => {
+    const { r, reload } = await setup(); const w = r.workflowRepository;
     await w.addDocument('one', { id: 'doc', title: 'مستند الاختبار', name: 'test.txt', mimeType: 'text/plain', dataUri: 'data:text/plain;base64,dGVzdA==', date: '2026-09-27T12:00:00Z' });
-    await w.setFees('one', 100000); await w.recordPayment('one', receipt('first', 40000)); await w.addNote('one', 'تمت مراجعة مستندات العميل');
+    await w.setFees('one', 100000); await w.recordPayment('one', receipt('first', 40000));
     const restored = reload();
-    expect(await progressOf(restored, server, 'one')).toMatchObject({ nextEventAt: '2026-10-05T09:30:00.000Z', currentStage: 'تمت مراجعة مستندات العميل' });
     const profile = await restored.profileRepository.getByClient(clientId);
     expect(profile).toMatchObject({ agreedFees: 100000, paidFees: 40000, trustBalance: 0, expenses: 0 });
     expect(profile.receipts).toHaveLength(1); expect(profile.documents).toHaveLength(1);
     const workflow = await restored.workflowRepository.getByMatter('one');
     expect(workflow.documents[0]?.dataUri).toBe('data:text/plain;base64,dGVzdA==');
-    expect(workflow.activity).toHaveLength(5);
+    expect(workflow.activity).toHaveLength(3);
+    // Appointments, stages, deadlines and notes are the server's: the device store has none.
+    expect(workflow).toMatchObject({ appointments: [], stages: [], deadlines: [], notes: [] });
   });
   it('keeps case accounts separate and aggregates them without double counting after edits', async () => {
     const { r, server } = await setup();
@@ -62,45 +61,24 @@ describe('complete local client workflow', () => {
     fail(false); await r.workflowRepository.setFees('one', 10000);
     expect((await reload().workflowRepository.getByMatter('one')).agreedFees).toBe(10000);
   });
-  it('preserves multiple appointments, advances next date and requires completion before closing', async () => {
-    const { r, server } = await setup(); const w = r.workflowRepository;
-    await w.addAppointment('one', { title: 'أول', startsAt: '2026-10-01T09:00:00Z' });
-    await w.addAppointment('one', { title: 'ثان', startsAt: '2026-10-02T09:00:00Z' });
-    await expect(w.closeMatter('one')).rejects.toThrow();
-    const appointments = (await w.getByMatter('one')).appointments;
-    await w.setAppointmentStatus('one', appointments[0]!.id, 'COMPLETED');
-    expect((await progressOf(r, server, 'one'))?.nextEventAt).toBe('2026-10-02T09:00:00.000Z');
-    await w.setAppointmentStatus('one', appointments[1]!.id, 'CANCELLED'); await w.closeMatter('one');
-    expect(server.rows.get('one')?.status).toBe('CLOSED');
-    expect((await w.getByMatter('one')).activity[0]?.title).toBe('إغلاق القضية');
-    await expect(w.addNote('one', 'بعد الإغلاق')).rejects.toThrow();
-  });
   it('does not overwrite unreadable stored data with empty fixtures', async () => {
-    const f = storageFixture(); f.data.set(STORAGE_KEY, 'invalid json'); const r = createLocalRepositories(f.storage, fakeMatterSource([serverMatter('one')]).source);
+    const f = storageFixture(); f.data.set(STORAGE_KEY, 'invalid json'); const r = createLocalRepositories(f.storage, fakeMatterSource([serverMatter('one')]).source, fakeStageSource());
     await expect(r.workflowRepository.setFees('one', 1000)).rejects.toThrow();
     expect(f.data.get(STORAGE_KEY)).toBe('invalid json');
   });
   it('rejects writes for matters the server does not return, and malformed attachments', async () => {
-    const { r, data } = await setup(); await expect(r.workflowRepository.addNote('missing', 'ملاحظة')).rejects.toThrow('القضية غير موجودة');
+    const { r, data } = await setup(); await expect(r.workflowRepository.setFees('missing', 1000)).rejects.toThrow('القضية غير موجودة');
     expect(data.size).toBe(0);
     await expect(r.workflowRepository.addDocument('one', { id: 'd', title: 'bad', name: 'bad.pdf', mimeType: 'application/pdf', dataUri: 'blob:temporary', date: '2026-09-27' })).rejects.toThrow();
   });
 });
 describe('server-authoritative matter status', () => {
-  it('closes a matter only after the server accepts the new status', async () => {
-    const { r, server, reload } = await setup(); server.failures.setStatus = true;
-    await expect(r.workflowRepository.closeMatter('one')).rejects.toThrow('تعذر الاتصال بالخادم');
-    expect(server.rows.get('one')?.status).toBe('ACTIVE');
-    expect((await reload().workflowRepository.getByMatter('one')).activity).toHaveLength(0);
-    server.failures.setStatus = false; await r.workflowRepository.closeMatter('one');
-    expect(server.calls).toContain('setStatus:one:CLOSED');
-  });
   it('reads the current status from the server before every write', async () => {
-    const { r, server } = await setup(); await r.workflowRepository.addNote('one', 'قبل الإغلاق');
+    const { r, server } = await setup(); await r.workflowRepository.setFees('one', 1000);
     server.rows.get('one')!.status = 'CLOSED'; // closed from another device
-    await expect(r.workflowRepository.addNote('one', 'بعد الإغلاق')).rejects.toThrow('القضية مغلقة');
+    await expect(r.workflowRepository.setFees('one', 2000)).rejects.toThrow('القضية مغلقة');
     server.rows.delete('two'); // no longer visible to this user (RLS)
-    await expect(r.officeRepository.addDeadline('two', { title: 'مهلة', source: 'مرجع', dueAt: '2026-10-20T20:59:00Z' })).rejects.toThrow('القضية غير موجودة');
+    await expect(r.officeRepository.depositTrust('two', { id: 'd', date: '2026-09-27', amount: 100, description: 'أمانة' })).rejects.toThrow('القضية غير موجودة');
   });
 });
 describe('workflow inputs', () => {
