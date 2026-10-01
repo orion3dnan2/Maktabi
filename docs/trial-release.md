@@ -4,15 +4,19 @@
 
 النسخة الحالية تحتاج اختبار قبول على هاتف فعلي قبل إرسالها للعميل. العملاء والقضايا والتعيينات تعمل محلياً مع المزامنة؛ الجلسات والمراحل والمهل والملاحظات مشتركة على الخادم وتحتاج اتصالاً. المالية والمستندات ما زالت على الجهاز، فاستخدم بيانات تجريبية أثناء التحقق.
 
-للتجربة المستقلة استخدم APK من EAS Internal Distribution؛ لا يعتمد تشغيله على استمرار خادم التطوير على حاسوبك. إعداد preview موجود، لكن عملية الدمج هذه لم تنتج APK أو رابط تنزيل جديداً. [توثيق Expo](https://docs.expo.dev/build/internal-distribution/).
+تم بناء APK تجريبي مستقل بنجاح بتاريخ 2026-10-01، بالإصدار **0.1.0 (1)**. لا يعتمد تشغيله على استمرار خادم التطوير على حاسوبك أو Expo Go. [تنزيل APK](https://expo.dev/artifacts/eas/N0aGqMSqasFXgNDNv6GLyYOQ6HQ4RvEyg8_J0VOjEA8.apk) · [صفحة البناء](https://expo.dev/accounts/orion3dnan3/projects/maktabi/builds/24a59cf7-b7fd-463d-9b46-f7d3b9a37ec6).
+
+المصدر المبني هو commit `0027457dbf3f3fcd46f0685f2022a343b33c7b3c` من `main`. حُفظ الملف محلياً في `artifacts/maktabi-preview-0.1.0-1.apk`، وفُحصت محتوياته الأساسية؛ لم يُثبّت أو يُختبر على هاتف فعلي بعد. تفاصيل التحقق في [تقرير APK](verification/apk-preview-2026-10-01.md).
 
 ## الإعداد (مرة واحدة)
+
+المشروع مرتبط الآن بحساب `orion3dnan3` ومعرّف `46a246da-3406-47fe-b862-d8c2c21fa0ff` في `apps/mobile/app.json`. لا تعِد `eas init` لهذه النسخة ولا تنشئ مشروعاً بديلاً. الأوامر التالية لإعداد بيئة مطور جديدة؛ الربط الحالي محفوظ في Git.
 
 ```bash
 npm i -g eas-cli
 eas login
 cd apps/mobile
-eas init        # يكتب projectId في app.json؛ اعمل commit للتغيير
+# projectId موجود في app.json لهذه النسخة
 ```
 
 إعدادات Supabase للبناء في `apps/mobile/eas.json` (`build.base.env`)، لأن `.env` مستثنى من Git ولا يصل إلى خوادم EAS. المفتاح publishable وليس سراً؛ لا تضع أبداً مفتاح `service_role` في التطبيق.
