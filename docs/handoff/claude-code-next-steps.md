@@ -2,7 +2,7 @@
 
 ## Integrated source
 
-Integration branch: `codex/integrate-trial-release`.
+Merged into local and remote `main` through [PR #16](https://github.com/orion3dnan2/Maktabi/pull/16), merge commit `c41f694`. PR #15 is also MERGED. Integration branch retained: `codex/integrate-trial-release`.
 - Existing offline foundation preserved in `b84d51b`.
 - `origin/claude/determined-newton-5a1kyb` merged in `7336f4a`.
 - `origin/claude/youthful-babbage-5kkk9r` merged in `c18e509`.
@@ -34,7 +34,7 @@ Turbo build inputs now include public Supabase variables and .env files; the mob
 
 See [current integration evidence](../verification/trial-integration-2026-10-01.md).
 - 169 mobile + 36 domain tests passed.
-- Mobile TypeScript and Expo lint passed.
+- All six workspace TypeScript checks and Expo lint passed.
 - Android/iOS/Web exports passed; no native APK was built by this integration run.
 - Clean migration replay and all seven SQL test scripts passed locally.
 - New SQL guard tests also passed against the linked project in a rolled-back transaction.
