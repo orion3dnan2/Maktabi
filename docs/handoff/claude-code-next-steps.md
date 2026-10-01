@@ -8,9 +8,9 @@ Merged into local and remote `main` through [PR #16](https://github.com/orion3dn
 - `origin/claude/youthful-babbage-5kkk9r` merged in `c18e509`.
 - Integration corrections follow those commits. This document supersedes the older cloud-only handoff.
 
-Supabase project: `ngckrfvsjggpnaddivyq`. All 26 applied migration versions are present, including the nine offline-foundation migrations and the two trial-office migrations. Four obsolete duplicate 2026092817* files were removed after comparing them with the canonical applied versions. Do not recreate them. A clean PostgreSQL 18 replay using `supabase/tests/local/supabase_stub.sql` passed.
+Supabase project: `ngckrfvsjggpnaddivyq`. All 27 applied migration versions are present, including the nine offline-foundation migrations, two trial-office migrations, guard patch and authorized smoke-fixture cleanup. Four obsolete duplicate 2026092817* files were removed after comparing them with the canonical applied versions. Do not recreate them. A clean PostgreSQL 18 replay using `supabase/tests/local/supabase_stub.sql` passed.
 
-Latest migration: `20261001095602_trial_integration_guards.sql`, applied on the project. Edge function `manage-users`: **version 8, ACTIVE**, `verify_jwt=false`. Public request/bootstrap actions are intentional; account-management actions still validate the caller and use service-only SQL contracts.
+Guard migration: `20261001095602_trial_integration_guards.sql`. Latest migration: `20261001102212_cleanup_authorized_trial_fixture.sql`, a one-time deletion of explicitly authorized synthetic data and a no-op on a fresh database. Both are applied. Edge function `manage-users`: **version 8, ACTIVE**, `verify_jwt=false`. Public request/bootstrap actions are intentional; account-management actions still validate the caller and use service-only SQL contracts.
 
 ## Data architecture
 
@@ -41,12 +41,12 @@ See [current integration evidence](../verification/trial-integration-2026-10-01.
 - Browser request form/navigation and required-field validation passed.
 - General Auth signup was disabled and saved; screenshot in verification.
 - Leaked-password protection remains disabled: project is Free, UI requires Pro.
-- Full live Auth request → approval smoke test was blocked by automatic approval review before execution. No live office/account was created by that attempt.
+- The initial live test was blocked; the owner subsequently explicitly authorized creation and immediate cleanup. Live Auth request/duplicate/pending isolation passed; approval via the trusted SQL helper and subsequent real Auth/admin/audit checks passed. All fixture entities, sessions, counters and local password file were deleted; post-deletion login returned invalid_credentials. The credentialless synthetic reviewer existed only within the approval transaction and was deleted before commit. Audit guards are enabled. See the report follow-up for exact coverage.
 
 ## Remaining release work
 
 1. Independently review critical integration/auth/sync changes before production acceptance (repository collaboration policy).
-2. With explicit permission, run the disposable live request/account test, approve only its exact office, then remove only the recorded synthetic fixtures. The prepared script is `apps/mobile/scripts/verify-trial-api.mjs`; its manifest contains a temporary password and must be protected and removed. Do not run it against production without that permission.
+2. Exercise approval through the platform-owner UI/Edge action; the completed smoke tested that decision via its SQL helper. The script `apps/mobile/scripts/verify-trial-api.mjs` creates fixtures and must not be rerun against production without authorization and immediate scoped cleanup. The preceding permission covered the completed fixture, not an indefinite test account.
 3. Link EAS to the existing project (`eas init` if no projectId), build preview APK, and verify Android cold start, SQLite/SecureStore, offline edits, reconnect, two users/devices and the office-approval flow.
 4. Validate legacy import against a backed-up genuine dataset.
 5. Add database replay/SQL checks to CI; implement shared finance/documents and offline server workflows as separate slices.

@@ -7,7 +7,8 @@ Authority: [MAKTABI_MASTER_VISION.md](MAKTABI_MASTER_VISION.md). Architecture: [
 ## Completed
 - Integrated cloud workflows, trial-office requests and the existing offline foundation; preserved the original product vision.
 - Shared appointments/stages/deadlines/notes/templates/events with server permissions; pending office approval and platform request management.
-- All 26 migrations present and clean replay verified; duplicate historical versions removed. Latest additive guard migration applied; manage-users v8 deployed.
+- All 27 migrations present and clean replay verified; duplicate historical versions removed. Guard migration and authorized fixture-cleanup migration applied; manage-users v8 deployed.
+- Owner-authorized live Auth smoke passed: duplicate public request, pending isolation, server-helper approval, active admin membership/audit. Fixture office/user/request/membership/sessions/counters and local password file deleted; zero remaining rows and rejected post-deletion login verified.
 - Client archive/restore synchronization, legacy financial mapping, preserved case/party types, bounded startup and late-write account isolation corrected.
 - Public Auth signup disabled; timing mitigation and all-attempt request limits added. Build cache now includes Supabase variables/.env and clears Metro.
 - Full Master Vision saved unchanged; normalized text compared against the supplied attachment.
@@ -26,7 +27,7 @@ Authority: [MAKTABI_MASTER_VISION.md](MAKTABI_MASTER_VISION.md). Architecture: [
 
 ## In Progress / release gates
 - Independent review of critical integration changes before production acceptance.
-- Full live Auth office-request → approval test requires explicit permission after automatic approval review blocked creation of production test fixtures.
+- Platform-owner approval through the actual UI/Edge action and native-device acceptance remain to be exercised; the live smoke used the approval SQL helper and real Auth/API requests.
 - Link EAS project, build and install preview APK; no native build was produced in this integration run.
 - Verify SQLite + SecureStore, cold startup, airplane mode/reconnect and sharing on actual Android/iOS runtimes and two devices.
 - Verify import/unlock UI on a backed-up genuine legacy dataset before office rollout.
@@ -59,7 +60,7 @@ Sourced Sudanese legal workflows/deadlines; document capture/OCR; notary registe
 
 ## Acceptance Evidence
 - **Current integration: 205 tests passed:** 169 mobile + 36 domain; mobile TypeScript and Expo lint passed with zero errors/warnings.
-- 26 migrations replayed on PostgreSQL 18. Seven SQL suites passed; the new guard suite also passed on the linked project inside a rollback transaction.
+- 27 migrations replayed on PostgreSQL 18. Seven SQL suites passed before cleanup; the guard suite passed again after the 27-file replay. The guard suite also passed on the linked project inside a rollback transaction.
 - Android/iOS/Web exports and browser request-form validation passed. See [2026-10-01 report](verification/trial-integration-2026-10-01.md).
 - The following real HTTP/offline-browser evidence belongs to the preceding foundation milestone (2026-09-30); it is not a claim that the new live trial-request flow passed:
 - Authenticated PostgreSQL/RLS suite passed with rollback: isolation, roles, suspended/invited membership, creator stamps, assignments/history/revocation, idempotency, conflicts and existing-data compatibility.
