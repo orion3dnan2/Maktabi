@@ -44,7 +44,11 @@
     "extra": {
       "router": {
         "origin": false
+      },
+      "eas": {
+        "projectId": "46a246da-3406-47fe-b862-d8c2c21fa0ff"
       }
-    }
+    },
+    "owner": "orion3dnan3"
   }
 }
