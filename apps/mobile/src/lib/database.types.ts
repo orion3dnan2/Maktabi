@@ -786,10 +786,6 @@ export type Database = {
           status: Database["public"]["Enums"]["office_status"]
         }[]
       }
-      platform_review_office_request: {
-        Args: { p_approve: boolean; p_office: string }
-        Returns: undefined
-      }
       platform_set_office_status: {
         Args: {
           p_office: string
@@ -868,6 +864,10 @@ export type Database = {
           p_source_hash: string
           p_user: string
         }
+        Returns: string
+      }
+      svc_review_office_request: {
+        Args: { p_actor: string; p_approve: boolean; p_office: string }
         Returns: string
       }
     }

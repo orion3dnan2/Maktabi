@@ -18,7 +18,7 @@ const statusLabel: Record<OfficeStatus, string> = { active: 'نشط', suspended:
 const requestTone: Record<OfficeStatus, Tone> = { active: 'green', suspended: 'red', closed: 'grey', pending: 'gold', rejected: 'red' };
 const ltr = (text: string) => `\u2066${text}\u2069`;
 
-/** Asks before an irreversible-looking action (Alert has no buttons on web). */
+/** Asks before a decision that cannot be undone (Alert has no buttons on web). */
 function askFirst(title: string, message: string, action: string, onYes: () => void) {
   if (Platform.OS === 'web') { if (globalThis.confirm?.(`${title}\n${message}`)) onYes(); return; }
   Alert.alert(title, message, [{ text: 'إلغاء', style: 'cancel' }, { text: action, onPress: onYes }]);
@@ -62,11 +62,10 @@ export default function PlatformScreen() {
   }, status === 'active' ? 'تم تفعيل المكتب' : 'تم إيقاف المكتب');
   const review = (q: RequestRow, approve: boolean) => askFirst(
     approve ? 'الموافقة على الطلب' : 'رفض الطلب',
-    approve ? `سيُفعَّل «${q.office_name}» ويستطيع مديره الدخول وإضافة فريقه.` : `لن يستطيع مدير «${q.office_name}» الدخول. يمكنك الموافقة لاحقاً إن غيّرت رأيك.`,
+    approve ? `سيُفعَّل «${q.office_name}» ويستطيع مديره الدخول وإضافة فريقه.` : `الرفض نهائي: لن يُفتح «${q.office_name}»، ويُحرَّر رقم هاتف مقدّم الطلب ليُستخدم في طلب جديد.`,
     approve ? 'موافقة' : 'رفض',
     () => void reviewOp.run(async () => {
-      const { error } = await supabase.rpc('platform_review_office_request', { p_office: q.office_id, p_approve: approve });
-      if (error) throw new Error('تعذر تسجيل القرار. حدّث القائمة ثم حاول مجدداً.');
+      await manageUsers('review_office_request', { office_id: q.office_id, approve });
     }, approve ? 'تمت الموافقة؛ أبلغ المدير أن يسجّل الدخول' : 'تم رفض الطلب'),
   );
 
@@ -89,7 +88,7 @@ export default function PlatformScreen() {
             {q.status === 'pending' ? <>
               <Button label="موافقة وتفعيل المكتب" disabled={reviewOp.busy} onPress={() => review(q, true)}/>
               <Button label="رفض" variant="secondary" disabled={reviewOp.busy} onPress={() => review(q, false)}/>
-            </> : q.status === 'rejected' ? <Button label="الموافقة رغم الرفض" variant="secondary" disabled={reviewOp.busy} onPress={() => review(q, true)}/> : null}
+            </> : null}
           </View>)}
         {reviewOp.message ? <Text accessibilityLiveRegion="polite" style={styles.created}>{reviewOp.message}</Text> : null}
         {reviewOp.error ? <Text accessibilityLiveRegion="polite" style={styles.error}>{reviewOp.error}</Text> : null}
