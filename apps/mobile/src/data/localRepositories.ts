@@ -1,6 +1,6 @@
 import { createLocalStore, type MatterSource, type StageSource } from './localStore';
 
-export interface LocalStorage { getItem(key: string): Promise<string | null>; setItem(key: string, value: string): Promise<void> }
+export interface LocalStorage { getItem(key: string): Promise<string | null>; setItem(key: string, value: string): Promise<void>; assertActive?(): void }
 export const STORAGE_KEY = 'maktabi:office-1:v1';
 
 /**
@@ -8,19 +8,23 @@ export const STORAGE_KEY = 'maktabi:office-1:v1';
  * if durable storage fails, so reads never see half a write. Matters and their procedure stages
  * come from `matters` and `stages` (Supabase in the app).
  */
-export function createLocalRepositories(storage: LocalStorage, matters: MatterSource, stages: StageSource) {
-  const core = createLocalStore(matters, stages);
+export function createLocalRepositories(storage: LocalStorage, matters: MatterSource, stages: StageSource, legacyId?: (id: string) => Promise<string | undefined>) {
+  const core = createLocalStore(matters, stages, legacyId);
   let loading: Promise<void> | undefined;
   let queue = Promise.resolve();
   const ready = () => loading ??= storage.getItem(STORAGE_KEY).then((raw) => {
     if (raw) core.restore(JSON.parse(raw));
   });
   const read = <A extends unknown[], R>(method: (...args: A) => Promise<R>) => async (...args: A): Promise<R> => {
-    await ready(); await queue; return method(...args);
+    await ready(); await queue; storage.assertActive?.();
+    const result = await method(...args);
+    storage.assertActive?.();
+    return result;
   };
   const write = <A extends unknown[], R>(method: (...args: A) => Promise<R>) => async (...args: A): Promise<R> => {
     await ready();
     const operation = queue.then(async () => {
+      storage.assertActive?.();
       const before = core.snapshot();
       try {
         const result = await method(...args);

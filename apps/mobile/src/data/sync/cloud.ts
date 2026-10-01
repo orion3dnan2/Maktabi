@@ -14,7 +14,7 @@ export function cloudError(error: { code?: string; message: string; details?: st
   return new SyncError('invalid',error.message);
 }
 export function clientFromRow(row: ClientRow): Client {
-  return { id:row.id,officeId:row.office_id,displayName:row.full_name,kind:row.client_type==='individual'?'PERSON':'ORGANIZATION',phone:row.phone??'',whatsapp:row.whatsapp??'',email:row.email??undefined,address:row.address??undefined,contactPerson:row.contact_person??undefined,registration:row.registration_number??undefined,nationalId:row.id_type==='national_id'?row.civil_id??undefined:undefined,notes:row.notes??undefined,createdAt:row.created_at };
+  return { id:row.id,officeId:row.office_id,displayName:row.full_name,kind:row.client_type==='individual'?'PERSON':'ORGANIZATION',phone:row.phone??'',whatsapp:row.whatsapp??'',email:row.email??undefined,address:row.address??undefined,contactPerson:row.contact_person??undefined,registration:row.registration_number??undefined,nationalId:row.id_type==='national_id'?row.civil_id??undefined:undefined,notes:row.notes??undefined,status:row.status.toUpperCase() as Client['status'],createdAt:row.created_at };
 }
 export function matterFromRow(row: MatterRow, parties: PartyRow[], clients: Client[]): Matter {
   const type = row.matter_type.toUpperCase();

@@ -28,9 +28,9 @@ describe('access routing', () => {
     const reception = user({ role: 'reception' });
     expect(canUseMatters(reception)).toBe(false);
     expect(canOpen(reception, ['matters', 'new'])).toBe(false);
-    // Procedure templates follow matter access (RLS on procedure_templates).
+    // Template management is restricted to office administrators.
     expect(canOpen(reception, ['office', 'procedures'])).toBe(false);
-    expect(canOpen(user({ role: 'lawyer' }), ['office', 'procedures'])).toBe(true);
+    expect(canOpen(user({ role: 'lawyer' }), ['office', 'procedures'])).toBe(false);
     expect(canOpen(reception, ['clients', 'new'])).toBe(true);
     expect(canEditClientDetails(reception)).toBe(false);
     for (const role of ['admin', 'lawyer', 'employee'] as const) {

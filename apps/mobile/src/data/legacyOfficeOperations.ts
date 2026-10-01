@@ -54,7 +54,7 @@ export function createOfficeOperations(c: OfficeContext) {
       w.stages[index] = { ...copy(value), status: old.status, completedAt: old.completedAt };
       const appointmentId = `stage-${value.id}`; const appointment = w.appointments.find((a) => a.id === appointmentId);
       if (value.nextAt) {
-        const data = { id: appointmentId, title: `${value.name} · ${value.authority}`, startsAt: new Date(value.nextAt).toISOString(), stageId: value.id, status: 'SCHEDULED' as const };
+        const data = { id: appointmentId, title: `${value.name} · ${value.authority}`, startsAt: new Date(value.nextAt).toISOString(), stageId: value.id, status: 'SCHEDULED' as const, kind: 'COURT_SESSION' as const };
         if (appointment) Object.assign(appointment, data); else w.appointments.push(data);
       } else if (appointment?.status === 'SCHEDULED') appointment.status = 'CANCELLED';
       c.commit(id, w, `تحديث بيانات مرحلة: ${value.name}`);
@@ -85,7 +85,7 @@ export function createOfficeOperations(c: OfficeContext) {
       if (!a || a.status !== 'SCHEDULED' || !outcome.trim()) throw new Error('اختر موعداً معلقاً واكتب نتيجة الجلسة');
       if (nextAt && (!Number.isFinite(Date.parse(nextAt)) || new Date(nextAt) <= new Date(a.startsAt))) throw new Error('الموعد التالي يجب أن يلي الجلسة');
       a.status = 'COMPLETED'; a.outcome = outcome.trim();
-      if (nextAt) w.appointments.push({ id: c.id(), title: a.title, startsAt: new Date(nextAt).toISOString(), status: 'SCHEDULED', stageId: a.stageId });
+      if (nextAt) w.appointments.push({ id: c.id(), title: a.title, startsAt: new Date(nextAt).toISOString(), status: 'SCHEDULED' as const, kind: 'COURT_SESSION' as const, stageId: a.stageId });
       c.commit(id, w, `نتيجة جلسة ${a.title}: ${outcome}`);
     },
     async saveInstallments(id: string, items: FeeInstallment[]) {

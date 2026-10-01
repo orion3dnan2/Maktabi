@@ -84,6 +84,25 @@ export const vaultStorage: LocalStorage = {
     await AsyncStorage.setItem(VAULT_KEY, JSON.stringify(vault)); session.vault = vault;
   },
 };
+/** A repository must never persist one user's pending operation into a later user's vault. */
+export function createScopedVaultStorage(): LocalStorage {
+  let session: typeof unlocked;
+  const assertActive = () => {
+    if (!session || session !== unlocked) throw new Error('انتهت جلسة المكتب');
+  };
+  return {
+    assertActive,
+    async getItem(key) {
+      session ??= unlocked;
+      assertActive();
+      return vaultStorage.getItem(key);
+    },
+    async setItem(key, value) {
+      assertActive();
+      return vaultStorage.setItem(key, value);
+    },
+  };
+}
 export async function encryptedBackup() { if (!unlocked) throw new Error('سجل الدخول أولاً'); const raw = await AsyncStorage.getItem(VAULT_KEY); if (!raw) throw new Error('لا توجد بيانات'); return raw; }
 export async function restoreEncryptedBackup(raw: string, phone: string, password: string) {
   if (operation) throw new Error('جارٍ تنفيذ عملية أخرى'); operation = true;

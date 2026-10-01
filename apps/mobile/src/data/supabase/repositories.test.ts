@@ -14,7 +14,7 @@ const M2 = '77777777-7777-4777-8777-777777777777';
 const row = (id: string, name: string): ClientRow => ({
   id, office_id: 'office', client_type: 'individual', full_name: name, phone: '+249900000101', whatsapp: '+249900000101', contact_person: null,
   registration_number: null, address: null, notes: null, email: null, civil_id: null, id_type: null, id_country: null, nationality: null,
-  secondary_phone: null, status: 'active', metadata: {}, created_at: '2026-09-29T10:00:00Z', created_by: null, updated_at: '2026-09-29T10:00:00Z',
+  secondary_phone: null, status: 'active', metadata: {}, created_at: '2026-09-29T10:00:00Z', created_by: null, revision: 1, updated_at: '2026-09-29T10:00:00Z',
 });
 const client: Client = { id: C1, officeId: 'office', kind: 'PERSON', displayName: 'أمجد', phone: '+249900000101', whatsapp: '+249900000101', createdAt: '' };
 const matterRow = (id: string): MatterQueryRow => ({

@@ -11,7 +11,7 @@ export type MatterType = 'CRIMINAL' | 'CIVIL' | 'PERSONAL_STATUS' | 'LABOUR' | '
 export type MatterStatus = 'ACTIVE' | 'ON_HOLD' | 'CLOSED' | 'ARCHIVED';
 /** nextEventAt and currentStage are derived from the matter's workflow, not stored with the matter. */
 export interface Matter { id: EntityId; officeId: EntityId; reference: string; title: string; type: MatterType; parties: MatterParty[]; authority?: string; status: MatterStatus; workflowId?: EntityId; openedAt: ISODate; nextEventAt?: ISODateTime; currentStage?: string; notes?: string; details: Record<string, string>; assignedLawyerId?: EntityId; assignedLawyerName?: string; }
-export interface MatterParty { id: EntityId; matterId: EntityId; clientId?: EntityId; displayName: string; role: 'CLIENT' | 'OPPONENT' | 'WITNESS' | 'OTHER'; isPrimary: boolean; }
+export interface MatterParty { id: EntityId; matterId: EntityId; clientId?: EntityId; displayName: string; role: 'CLIENT' | 'OPPONENT' | 'WITNESS' | 'EXPERT' | 'OTHER'; isPrimary: boolean; }
 
 export interface Workflow { id: EntityId; matterId: EntityId; name: string; currentStageId: EntityId; stages: WorkflowStage[]; }
 export interface WorkflowStage { id: EntityId; workflowId: EntityId; name: string; order: number; status: 'PENDING' | 'ACTIVE' | 'COMPLETED' | 'SKIPPED'; startedAt?: ISODateTime; completedAt?: ISODateTime; }

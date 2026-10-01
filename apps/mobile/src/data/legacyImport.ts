@@ -2,6 +2,13 @@ import type { Client, Matter } from '@maktabi/domain';
 import { normalizeArabic, validateClient, validateMatter } from '@maktabi/domain';
 import type { RepositorySnapshot } from './mockRepositories';
 import { canonicalClient } from './clientFields';
+import { parseSnapshot } from './localStore';
+
+/** Recover the original selection after the financial store upgrades a v1 vault. */
+export function readLegacySnapshot(value: unknown): RepositorySnapshot {
+  const parsed = parseSnapshot(value);
+  return { version: 1, clients: parsed.legacy?.clients as Client[] ?? [], matters: parsed.legacy?.matters as Matter[] ?? [], profiles: parsed.legacy?.profiles as RepositorySnapshot['profiles'] ?? [], workflows: parsed.legacy?.workflows as RepositorySnapshot['workflows'] ?? [], office: parsed.office };
+}
 
 export interface ImportPlan { clients:Client[]; matters:Matter[]; clientIds:Record<string,string>; matterIds:Record<string,string> }
 /** No writes here: validate the entire selection and reconcile exact identities before enqueueing. */

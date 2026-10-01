@@ -32,12 +32,12 @@ describe('workflow mapping', () => {
       requirements: [{ title: 'العريضة', done: true }, { title: 'الرسوم', done: false }], document_ids: [],
     });
   });
-  it('round-trips office templates and drops matter types the app does not offer', () => {
+  it('round-trips office templates including preserved real-estate types', () => {
     const template: ProcedureTemplate = { id: 't', name: ' مسار المكتب ', types: ['CIVIL', 'LABOUR'], stages: [{ name: 'تسوية', authority: 'المكتب', requirements: [' خطاب ', ''] }] };
     const row = templateToRow(template);
     expect(row).toEqual({ id: 't', name: 'مسار المكتب', matter_types: ['civil', 'labour'], stages: [{ name: 'تسوية', authority: 'المكتب', requirements: ['خطاب'] }] });
     expect(templateFromRow({ ...row, matter_types: ['civil', 'real_estate'], office_id: 'o', created_by: null, created_at: '', updated_at: '' }))
-      .toEqual({ id: 't', name: 'مسار المكتب', types: ['CIVIL'], stages: [{ name: 'تسوية', authority: 'المكتب', requirements: ['خطاب'] }] });
+      .toEqual({ id: 't', name: 'مسار المكتب', types: ['CIVIL', 'REAL_ESTATE'], stages: [{ name: 'تسوية', authority: 'المكتب', requirements: ['خطاب'] }] });
   });
   it('writes activity lines in Arabic for every event the database records', () => {
     expect(eventTitle('stage_started', 'قيد الدعوى')).toBe('بدء مرحلة قيد الدعوى');

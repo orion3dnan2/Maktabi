@@ -67,7 +67,7 @@ export function isLocalSnapshot(value: unknown): boolean {
 }
 export const emptySnapshot = (): LocalSnapshot => ({ version: 2, workflows: [], office: defaultOffice() });
 
-export function createLocalStore(matters: MatterSource, stages: StageSource) {
+export function createLocalStore(matters: MatterSource, stages: StageSource, legacyId?: (id: string) => Promise<string | undefined>) {
   let office = defaultOffice();
   let legacy: LegacyLocalRecords | undefined;
   const workflows = new Map<string, MatterWorkflow>();
@@ -78,6 +78,14 @@ export function createLocalStore(matters: MatterSource, stages: StageSource) {
     const matter = await matters.getById(id);
     if (!matter) throw new Error('القضية غير موجودة أو لا تملك صلاحية الوصول إليها');
     current.set(id, matter);
+    if (!workflows.has(id) && legacy && legacyId) {
+      const oldId = await legacyId(id);
+      const entry = legacy.workflows.find((row) => Array.isArray(row) && row[0] === oldId);
+      if (Array.isArray(entry) && entry[1] && typeof entry[1] === 'object') {
+        // Preserve the original in legacy; new writes use the verified shared matter id.
+        workflows.set(id, copy({ ...emptyWorkflow(), ...entry[1] }));
+      }
+    }
     return matter;
   };
   const requireMatter = (id: string) => {
@@ -100,7 +108,7 @@ export function createLocalStore(matters: MatterSource, stages: StageSource) {
     async (id: string, ...rest: A): Promise<R> => { await load(id); return operation(id, ...rest); };
 
   const workflowRepository: DeviceWorkflowRepository = {
-    async getByMatter(id) { return getWorkflow(id); },
+    async getByMatter(id) { await load(id); return getWorkflow(id); },
     setFees: scoped(async (id, amount: number) => {
       const w = writable(id);
       if (!Number.isSafeInteger(amount) || amount <= 0 || amount < paidTotal(w)) throw new Error('الأتعاب يجب أن تكون موجبة ولا تقل عن المدفوع');
@@ -141,6 +149,7 @@ export function createLocalStore(matters: MatterSource, stages: StageSource) {
       const list = known ?? await matters.listByClient(id);
       const result: ClientProfileData = { agreedFees: 0, paidFees: 0, trustBalance: 0, expenses: 0, receipts: [], documents: [], activity: [] };
       for (const m of list.filter((m) => m.parties.some((p) => p.isPrimary && p.clientId === id))) {
+        await load(m.id);
         if (!workflows.has(m.id)) continue;
         const w = getWorkflow(m.id);
         result.agreedFees += w.agreedFees;

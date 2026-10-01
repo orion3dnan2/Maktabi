@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Text, View } from 'react-native';
 import { BodyText, Button, Card, ChoiceField, ErrorState, FormPage, Input, LoadingState, SectionHeader, featureStyles as s } from '@maktabi/ui';
+import { isUnlocked } from '@/data/vault';
 import { matterRepository, workflowRepository } from '@/data/repositories';
 import { appointmentISO, appointmentKinds, paidTotal, workflowStages, type AppointmentKind } from '@/data/workflow';
 import { money, useResource } from '../shared/hooks';
@@ -46,14 +47,15 @@ export default function MatterWorkflowScreen() {
     </Card>
     {!closed && sessions.length ? <Card><SectionHeader title="تسجيل نتيجة جلسة"/><ChoiceField label="الجلسة" value={sessionId} options={sessions.map((a) => ({ value: a.id, label: `${a.title} · ${localDate(a.startsAt)}` }))} onChange={setSessionId}/><Input label="نتيجة الجلسة" multiline value={outcome} onChangeText={setOutcome}/><Input label="تاريخ الجلسة التالية (YYYY-MM-DD، اختياري)" value={nextDate} onChangeText={setNextDate}/><Input label="وقت الجلسة التالية (HH:mm)" value={nextTime} onChangeText={setNextTime}/><BodyText muted>النتيجة المسجلة لا تُعدَّل؛ أضف ملاحظة متابعة لأي تصحيح.</BodyText><Button disabled={busy || !sessionId} label="حفظ نتيجة الجلسة" onPress={() => void run(async () => { await workflowRepository.finishSession(id, sessionId, outcome, nextDate ? appointmentISO(nextDate, nextTime) : undefined); setSessionId(''); setOutcome(''); setNextDate(''); }, nextDate ? 'تم حفظ نتيجة الجلسة وجدولة الجلسة التالية' : 'تم حفظ نتيجة الجلسة')}/></Card> : null}
     </> : null}
-    {section === 'documents' ? <Card><SectionHeader title="المستندات المرفقة"/><BodyText muted>PDF أو Word أو صورة أو نص، حتى 1 ميجابايت لكل مستند.</BodyText>
+    {!isUnlocked() && ['documents', 'finance'].includes(section) ? <Card><BodyText>افتح بيانات هذا الجهاز لعرض المستندات والأتعاب.</BodyText><Button label="فتح البيانات المحلية" onPress={() => router.push('/office/legacy')}/></Card> : null}
+    {section === 'documents' && isUnlocked() ? <Card><SectionHeader title="المستندات المرفقة"/><BodyText muted>PDF أو Word أو صورة أو نص، حتى 1 ميجابايت لكل مستند.</BodyText>
       {!closed ? <Button label="إرفاق مستند" disabled={busy} onPress={() => void run(async () => { const doc = await pickAttachment(); if (doc) await workflowRepository.addDocument(id, doc); }, 'تم تحديث المستندات')}/> : null}
       {!w.documents.length ? <BodyText muted>لا توجد مرفقات بعد.</BodyText> : w.documents.map((doc) => <View key={doc.id} style={s.item}><BodyText>{doc.title}</BodyText><BodyText muted>{localDate(doc.date)}</BodyText><Button disabled={busy} label={`تنزيل: ${doc.name}`} variant="secondary" onPress={() => void run(() => downloadAttachment(doc), 'المستند جاهز')}/></View>)}
     </Card> : null}
-    {section === 'finance' ? <FinancePanel matter={m} workflow={w} run={run} busy={busy} closed={closed}/> : null}
+    {section === 'finance' && isUnlocked() ? <FinancePanel matter={m} workflow={w} run={run} busy={busy} closed={closed}/> : null}
     {section === 'notes' ? <><Card><SectionHeader title="ملاحظات المتابعة"/>{!closed ? <><Input label="ملاحظة المتابعة" multiline value={note} onChangeText={setNote}/><Button disabled={busy} label="حفظ الملاحظة" onPress={() => void run(async () => { await workflowRepository.addNote(id, note); setNote(''); }, 'تم حفظ الملاحظة')}/></> : null}{w.notes.map((n) => <View key={n.id} style={s.item}><BodyText>{n.text}</BodyText><BodyText muted>{localDate(n.date)}</BodyText></View>)}</Card>
       <Card><SectionHeader title="سجل العمليات"/>{w.activity.map((a, i) => <BodyText key={`${a.date}-${i}`}>{a.title} · {localDate(a.date)}</BodyText>)}</Card>
-      {!closed ? <Card><BodyText>المتبقي من الأتعاب: {money(w.agreedFees - paid)}</BodyText><BodyText muted>الإغلاق يحتفظ بالملف والمستندات والإيصالات ويوقف إضافة عمليات جديدة.</BodyText>{closing ? <><BodyText>تأكيد إغلاق هذه القضية؟</BodyText><Button disabled={busy} label="تأكيد إغلاق القضية" onPress={() => void run(async () => { await workflowRepository.closeMatter(id); setClosing(false); }, 'تم إغلاق القضية وحفظ سجلها')}/><Button label="متابعة العمل" variant="secondary" onPress={() => setClosing(false)}/></> : <Button label="إغلاق القضية" variant="secondary" onPress={() => setClosing(true)}/>}</Card> : null}
+      {!closed ? <Card><BodyText>المتبقي من الأتعاب: {money(w.agreedFees - paid)}</BodyText><BodyText muted>الإغلاق يحتفظ بالملف والمستندات والإيصالات ويوقف إضافة عمليات جديدة.</BodyText>{closing ? <><BodyText>تأكيد إغلاق هذه القضية؟</BodyText><Button disabled={busy} label="تأكيد إغلاق القضية" onPress={() => void run(async () => { await workflowRepository.closeMatter(id); setClosing(false); }, 'حُفظ طلب الإغلاق؛ راجع حالة المزامنة لتأكيد قبوله')}/><Button label="متابعة العمل" variant="secondary" onPress={() => setClosing(false)}/></> : <Button label="إغلاق القضية" variant="secondary" onPress={() => setClosing(true)}/>}</Card> : null}
     </> : null}
     {client?.clientId ? <Button label="ملف العميل" variant="secondary" onPress={() => router.push({ pathname: '/clients/[id]', params: { id: client.clientId! } })}/> : null}
   </FormPage>;

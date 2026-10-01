@@ -9,6 +9,7 @@ import { cachedAccess, rememberAccess, forgetAccess } from './offlineAccess';
 import { accessProblem, isStaff, type Access } from './access';
 import { normalizePhone, phoneLoginEmail } from './phone';
 import { AuthRetryableFetchError } from '@supabase/supabase-js';
+import { settleWithin } from '@/lib/settleWithin';
 
 type Status = 'loading' | 'signedOut' | 'ready';
 interface AuthState {
@@ -29,6 +30,7 @@ async function loadAccess(): Promise<Access | undefined> {
   const { data, error } = await supabase.rpc('my_access');
   if (error) throw cloudError(error);
   const access = (data ?? undefined) as Access | undefined;
+  if (accessProblem(access)) return access;
   if (access?.office && access.role !== 'client') {
     const { data: member, error: memberError } = await supabase.from('office_members').select('role,status').eq('office_id',access.office.id).eq('user_id',access.user_id).maybeSingle();
     if (memberError) throw cloudError(memberError);
@@ -58,11 +60,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (async () => {
       try {
         let current: Access | undefined;
-        const { data, error: sessionError } = await supabase.auth.getSession();
-        if(sessionError instanceof AuthRetryableFetchError) current=await cachedAccess();
+        const sessionResult = await settleWithin(() => supabase.auth.getSession(), null);
+        const data = sessionResult?.data;
+        const sessionError = sessionResult?.error;
+        if(!sessionResult || sessionError instanceof AuthRetryableFetchError) current=await cachedAccess();
         else {
           if(sessionError) throw sessionError;
-          if (!data.session) { if (active) setStatus('signedOut'); return; }
+          if (!data?.session) { if (active) setStatus('signedOut'); return; }
           try { current = await loadAccess(); if (current) await rememberAccess(current); }
           catch (e) { if (e instanceof SyncError && e.reason === 'offline') current = await cachedAccess(data.session.user.id); else { await forgetAccess(data.session.user.id); throw e; } }
         }
@@ -95,7 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       await initializeSharedSession(current!);
       await rememberAccess(current!);
-      void supabase.rpc('log_login_success');
+      // PostgREST builders are lazy: attaching then actually sends the audit request.
+      void supabase.rpc('log_login_success').then(({ error }) => { if (error) console.warn('Login audit could not be saved'); });
       setAccess(current); setStatus('ready');
     } catch (e) {
       await supabase.auth.signOut();

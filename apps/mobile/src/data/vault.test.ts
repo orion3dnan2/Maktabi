@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createVault, encryptedBackup, hasVault, isUnlocked, lockVault, restoreEncryptedBackup, unlockVault, vaultStorage } from './vault';
+import { createScopedVaultStorage, createVault, encryptedBackup, hasVault, isUnlocked, lockVault, restoreEncryptedBackup, selectVaultUser, unlockVault, vaultStorage } from './vault';
 import { STORAGE_KEY } from './localRepositories';
 import { pbkdf2 } from '@noble/hashes/pbkdf2.js';
 import { sha256 } from '@noble/hashes/sha2.js';
@@ -8,7 +8,7 @@ const fixture = vi.hoisted(() => ({ store: new Map<string, string>(), fail: fals
 vi.mock('@react-native-async-storage/async-storage', () => ({ default: { async getItem(key: string) { return fixture.store.get(key) ?? null; }, async setItem(key: string, value: string) { if (fixture.fail) throw new Error('disk full'); fixture.store.set(key, value); }, async removeItem(key: string) { fixture.store.delete(key); } } }));
 vi.mock('expo-crypto', () => ({ randomUUID: () => crypto.randomUUID(), async getRandomBytesAsync(length: number) { return crypto.getRandomValues(new Uint8Array(length)); } }));
 const phone = '+249000000999'; const password = 'Maktabi-test-passphrase';
-beforeEach(() => { lockVault(); fixture.store.clear(); fixture.fail = false; });
+beforeEach(() => { selectVaultUser(null); fixture.store.clear(); fixture.fail = false; });
 describe('office vault lifecycle', () => {
   it('creates an empty office, persists encrypted data, locks and verifies phone/password', async () => {
     await createVault(phone, password); expect(isUnlocked()).toBe(true); expect(JSON.parse((await vaultStorage.getItem(''))!)).toMatchObject({ version: 2, workflows: [] });
@@ -42,6 +42,18 @@ describe('office vault lifecycle', () => {
   });
 });
 describe('per-user workspaces', () => {
+  it('rejects an old repository write after another user unlocks the device', async () => {
+    const { openUserVault } = await import('./vault');
+    await openUserVault('user-a', phone, password);
+    const first = createScopedVaultStorage();
+    await first.getItem('');
+    await openUserVault('user-b', phone, password);
+    const before = await vaultStorage.getItem('');
+    await expect(first.setItem('', 'private user-a data')).rejects.toThrow('انتهت جلسة المكتب');
+    expect(() => first.assertActive?.()).toThrow('انتهت جلسة المكتب');
+    expect(await vaultStorage.getItem('')).toBe(before);
+    await expect(createScopedVaultStorage().getItem('')).resolves.toBe(before);
+  });
   it('keeps each signed-in user in their own vault and reports a changed password', async () => {
     const { openUserVault, selectVaultUser, discardUserVault, VaultPasswordMismatch } = await import('./vault');
     await openUserVault('user-a', phone, password); await vaultStorage.setItem('', JSON.stringify({ version: 1, clients: [{ id: 'a' }], matters: [] }));

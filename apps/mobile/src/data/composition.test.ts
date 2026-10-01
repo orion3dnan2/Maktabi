@@ -75,7 +75,7 @@ describe('repositories as the screens see them', () => {
     const r = setup([serverMatter('m1')]);
     expect(await r.workflowRepository.getByMatter('m1')).toMatchObject({ currentStage: 'قيد الدعوى', activity: [{ title: 'جدولة موعد: جلسة' }] });
     r.lock();
-    await expect(r.workflowRepository.getByMatter('m1')).rejects.toThrow('سجل الدخول');
+    expect(await r.workflowRepository.getByMatter('m1')).toMatchObject({ currentStage: 'قيد الدعوى', agreedFees: 0 });
     await expect(r.officeRepository.getSettings()).rejects.toThrow('سجل الدخول');
     expect(await r.matterRepository.listByOffice('ignored')).toHaveLength(1);
   });

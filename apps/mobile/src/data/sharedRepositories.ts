@@ -1,5 +1,5 @@
 import { randomUUID } from 'expo-crypto';
-import { validateClient, validateMatter, type ClientRepository, type MatterRepository } from '@maktabi/domain';
+import { validateClient, validateMatter, type ClientStatus } from '@maktabi/domain';
 import type { Access } from '@/auth/access';
 import { can } from '@/auth/permissions';
 import { cloudTransport } from './sync/cloud';
@@ -31,7 +31,7 @@ export const sharedClientRepository:SupabaseClientRepository = {
   async listByOffice(id) { return Object.values((await requireOffice(id).store.read()).clients).map(r=>r.value).filter(c=>c.status!=='ARCHIVED'); },
   async listArchived(id) { return Object.values((await requireOffice(id).store.read()).clients).map(r=>r.value).filter(c=>c.status==='ARCHIVED'); },
   async count() { return (await this.listByOffice(OFFICE_ID)).length; },
-  async setStatus(id, status) { const client = await this.getById(id); if (!client) throw new Error('العميل غير موجود'); await this.save({...client, status}); },
+  async setStatus(id, status: ClientStatus) { const client = await this.getById(id); if (!client) throw new Error('العميل غير موجود'); await this.save({...client, status}); },
   async save(client) {
     if(!can(active?.access,'create_clients')) throw new Error('لا تملك صلاحية حفظ العميل');
     client = canonicalClient(client);

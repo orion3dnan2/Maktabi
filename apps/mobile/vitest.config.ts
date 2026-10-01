@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config';
+import { fileURLToPath, URL } from 'node:url';
 
-const here = (path: string) => decodeURIComponent(new URL(path, import.meta.url).pathname);
+const here = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
 export default defineConfig({
   resolve: {

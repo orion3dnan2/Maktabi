@@ -49,10 +49,10 @@ describe('client profile totals', () => {
     await store.workflowRepository.setFees('s1', 9000);
     expect(await store.profileRepository.getByClient('c1')).toMatchObject({ agreedFees: 1000 });
     expect(server.calls).toContain('listByClient:c1');
-    // With the matters already loaded (client list screen), no server call is made.
+    // Revalidate access before reading financial records, including with a supplied list.
     server.calls.length = 0;
     expect(await store.profileRepository.getByClient('c2', [primary, secondary])).toMatchObject({ agreedFees: 9000 });
-    expect(server.calls).toEqual([]);
+    expect(server.calls).toEqual(['getById:s1']);
   });
   it('starts a client with no local activity at zero', async () => {
     const store = createLocalStore(fakeMatterSource([]).source, fakeStageSource());

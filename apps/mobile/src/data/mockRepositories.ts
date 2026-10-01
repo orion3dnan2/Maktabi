@@ -7,9 +7,9 @@ import {
   type MatterRepository,
   type MatterType,
 } from "@maktabi/domain";
-import { emptyWorkflow, paidTotal, trustBalance, type MatterWorkflow, type WorkflowRepository } from './workflow';
+import { emptyWorkflow, paidTotal, trustBalance, type MatterWorkflow, type DeviceWorkflowRepository } from './workflow';
 import { defaultOffice, type OfficeData } from './office';
-import { createOfficeOperations } from './officeOperations';
+import { createOfficeOperations } from './legacyOfficeOperations';
 export const OFFICE_ID = "office-1";
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 export const newId = () =>
@@ -175,7 +175,7 @@ export function createMockRepositories() {
   };
   const getWorkflow = (id: string) => {
     const m = requireMatter(id); const value = { ...emptyWorkflow(), ...workflows.get(id) };
-    if (!workflows.has(id) && m.nextEventAt) value.appointments.push({ id: `initial-${id}`, title: 'جلسة القضية', startsAt: m.nextEventAt, status: 'SCHEDULED' });
+    if (!workflows.has(id) && m.nextEventAt) value.appointments.push({ id: `initial-${id}`, title: 'جلسة القضية', startsAt: m.nextEventAt, status: 'SCHEDULED', kind: 'COURT_SESSION' });
     return copy(value);
   };
   const commitWorkflow = (id: string, value: MatterWorkflow, title: string) => {
@@ -190,12 +190,16 @@ export function createMockRepositories() {
     if (m.status === 'CLOSED' || m.status === 'ARCHIVED') throw new Error('القضية مغلقة؛ لا يمكن إضافة عمليات جديدة');
     return getWorkflow(id);
   };
-  const workflowRepository: WorkflowRepository = {
+  const workflowRepository: DeviceWorkflowRepository & {
+    addAppointment(id:string,item:{title:string;startsAt:string}):Promise<void>;
+    setAppointmentStatus(id:string,appointmentId:string,status:'COMPLETED'|'CANCELLED'):Promise<void>;
+    addNote(id:string,text:string):Promise<void>; closeMatter(id:string):Promise<void>;
+  } = {
     async getByMatter(id) { return getWorkflow(id); },
     async addAppointment(id, item) {
       if (!item.title.trim() || !Number.isFinite(Date.parse(item.startsAt))) throw new Error('عنوان الموعد وتاريخه مطلوبان');
       const w = writable(id);
-      w.appointments.push({ ...item, title: item.title.trim(), startsAt: new Date(item.startsAt).toISOString(), id: newId(), status: 'SCHEDULED' });
+      w.appointments.push({ ...item, title: item.title.trim(), startsAt: new Date(item.startsAt).toISOString(), id: newId(), status: 'SCHEDULED', kind: 'COURT_SESSION' });
       commitWorkflow(id, w, `جدولة موعد: ${item.title.trim()}`);
     },
     async setAppointmentStatus(id, appointmentId, status) {
@@ -241,6 +245,7 @@ export function createMockRepositories() {
     },
   };
   const clientRepository: ClientRepository = {
+    async setStatus(id,status) { const c=clients.find(c=>c.id===id); if(!c) throw new Error('العميل غير موجود'); c.status=status; },
     async getById(id) {
       return copy(clients.find((c) => c.id === id) ?? null);
     },
@@ -274,6 +279,7 @@ export function createMockRepositories() {
     },
   };
   const matterRepository: MatterRepository = {
+    async setStatus(id,status) { requireMatter(id).status=status; },
     async getById(id) {
       return copy(matters.find((m) => m.id === id) ?? null);
     },

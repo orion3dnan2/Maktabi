@@ -15,6 +15,7 @@
 // functions, which only service_role can execute.
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { normalizePhone, phoneLoginEmail } from './phone.ts';
+import { padOfficeRequest } from './requestTiming.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -138,7 +139,8 @@ async function withNewUser<T>(e164: string, secret: string, fullName: string, li
   try {
     return { userId: data.user.id, result: await link(data.user.id) };
   } catch (e) {
-    await admin.auth.admin.deleteUser(data.user.id).catch((cleanup) => console.error('cleanup failed', cleanup));
+    const cleanup = await admin.auth.admin.deleteUser(data.user.id);
+    if (cleanup.error) console.error('cleanup failed', cleanup.error);
     throw e;
   }
 }
@@ -198,6 +200,8 @@ async function handle(req: Request, body: Body): Promise<Record<string, unknown>
       const e164 = phone(body, 'admin_phone'); const officePhone = optionalPhone(body, 'office_phone', 'هاتف المكتب');
       const note = optionalText(body, 'note', 500); const secret = password(body, 'admin_password');
       const source = await sourceHash(req);
+      const attemptLimit = await rpc<string | null>('svc_consume_office_request_attempt', { p_source_hash: source });
+      if (attemptLimit) throw limitError(attemptLimit);
       const limit = await rpc<string | null>('svc_office_request_limit', { p_source_hash: source });
       if (limit) throw limitError(limit);
       try {
@@ -232,10 +236,17 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   const json = (status: number, payload: unknown) => new Response(JSON.stringify(payload), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
   if (req.method !== 'POST') return json(405, { ok: false, code: 'method', message: 'POST only' });
+  const startedAt = Date.now();
+  let isOfficeRequest = false;
   try {
     const body = await req.json().catch(() => { throw new HttpError(400, 'bad_json', 'طلب غير صالح'); }) as Body;
-    return json(200, { ok: true, ...(await handle(req, body)) });
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new HttpError(400, 'bad_json', 'طلب غير صالح');
+    isOfficeRequest = body.action === 'request_office';
+    const result = await handle(req, body);
+    if (isOfficeRequest) await padOfficeRequest(startedAt);
+    return json(200, { ok: true, ...result });
   } catch (e) {
+    if (isOfficeRequest) await padOfficeRequest(startedAt);
     if (e instanceof HttpError) return json(e.status, { ok: false, code: e.code, message: e.message });
     console.error('unexpected', e);
     return json(500, { ok: false, code: 'internal', message: 'حدث خطأ غير متوقع' });

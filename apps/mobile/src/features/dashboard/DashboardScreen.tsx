@@ -6,22 +6,32 @@ import { Chevron, HeroHeader, IconBubble, LuxeCard, row, rtl, SectionTitle, Shee
 import { useCallback } from 'react';
 import { useAuth } from '@/auth/AuthProvider';
 import { canUseMatters } from '@/auth/access';
+import { isUnlocked } from '@/data/vault';
+import { RepositoryError } from '@/data/supabase/errors';
 import { emptySources, summarizeDashboard } from '@/data/dashboard';
 import { clientRepository, matterRepository, OFFICE_ID, workflowRepository } from '@/data/repositories';
 import { money, useResource } from '../shared/hooks';
 
 const time = new Intl.DateTimeFormat('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true, numberingSystem: 'latn' });
 const load = async (withMatters: boolean) => {
-  if (!withMatters) return summarizeDashboard(emptySources(await clientRepository.count()));
-  const [clients, matters, sessions, deadlines, events] = await Promise.all([
-    clientRepository.count(), matterRepository.listByOffice(OFFICE_ID), workflowRepository.listScheduled(),
+  if (!withMatters) return { ...summarizeDashboard(emptySources(await clientRepository.count())), remoteAvailable: true };
+  const [clients, matters] = await Promise.all([clientRepository.count(), matterRepository.listByOffice(OFFICE_ID)]);
+  const base = emptySources(clients);
+  base.matters = matters;
+  base.finance = await Promise.all(matters.map(async (matter) => ({ matter, workflow: await workflowRepository.getOnDevice(matter.id) })));
+  try {
+  const [sessions, deadlines, events] = await Promise.all([
+    workflowRepository.listScheduled(),
     workflowRepository.listOpenDeadlines(), workflowRepository.listRecentEvents(8),
   ]);
-  const finance = await Promise.all(matters.map(async (matter) => ({ matter, workflow: await workflowRepository.getOnDevice(matter.id) })));
-  return summarizeDashboard({ clients, matters, sessions, deadlines, events, finance });
+  return { ...summarizeDashboard({ ...base, sessions, deadlines, events }), remoteAvailable: true };
+  } catch (error) {
+    if (error instanceof RepositoryError && error.kind === 'connection') return { ...summarizeDashboard(base), remoteAvailable: false };
+    throw error;
+  }
 };
 
-function StatTile({ title, value, caption, icon, mc, dark, onPress }: { title: string; value: number; caption: string; icon: IonName | McName; mc?: boolean; dark?: boolean; onPress: () => void }) {
+function StatTile({ title, value, caption, icon, mc, dark, onPress }: { title: string; value: number | string; caption: string; icon: IonName | McName; mc?: boolean; dark?: boolean; onPress: () => void }) {
   return <LuxeCard dark={dark} onPress={onPress} accessibilityLabel={`${title}: ${value}`} style={styles.tile}>
     <View style={[styles.tileRow, { flexDirection: row }]}>
       <View style={styles.tileText}>
@@ -58,16 +68,18 @@ export default function DashboardScreen() {
     <ScrollView contentContainerStyle={styles.scroll} refreshControl={<RefreshControl refreshing={loading} onRefresh={reload} tintColor={colors.gold500}/>}>
       <HeroHeader title={firstName ? `مرحباً أستاذ ${firstName}` : 'مرحباً'} subtitle="نظرة سريعة على أعمال اليوم" onBell={() => Alert.alert('الإشعارات', 'لا توجد إشعارات جديدة.')}/>
       <Sheet>
+        {!data.remoteAvailable ? <Text style={styles.disclaimer}>العملاء والقضايا متاحة من النسخة المحلية؛ اتصل بالإنترنت لتحديث الجلسات والمهل والنشاط.</Text> : null}
+
         <View style={[styles.grid, { flexDirection: row }]}>
-          <StatTile dark title="الجلسات القادمة" value={data.upcoming} caption={matters ? 'قضايا لها موعد' : 'غير متاح لدورك'} icon="calendar-outline" onPress={() => router.push('/(tabs)/calendar')}/>
+          <StatTile dark title="الجلسات القادمة" value={data.remoteAvailable ? data.upcoming : '—'} caption={matters ? 'قضايا لها موعد' : 'غير متاح لدورك'} icon="calendar-outline" onPress={() => router.push('/(tabs)/calendar')}/>
           <StatTile title="القضايا النشطة" value={data.activeMatters} caption={matters ? 'قضية نشطة حالياً' : 'غير متاح لدورك'} icon="people" onPress={goMatters}/>
-          <StatTile title="المهام المطلوبة" value={snapshot.upcomingDeadlines.length + snapshot.overdueFeeItems} caption="مهام بحاجة إلى متابعة" icon="clipboard-text-outline" mc onPress={goMatters}/>
+          <StatTile title="المهام المطلوبة" value={data.remoteAvailable ? snapshot.upcomingDeadlines.length + snapshot.overdueFeeItems : '—'} caption="مهام بحاجة إلى متابعة" icon="clipboard-text-outline" mc onPress={goMatters}/>
           <StatTile dark title="العملاء" value={data.clients} caption="عميل نشط" icon="account-group" mc onPress={() => router.push('/(tabs)/clients')}/>
         </View>
-        <LuxeCard><SectionTitle icon="wallet-outline" title="الأتعاب المتبقية"/><Text style={styles.tileValue}>{money(snapshot.outstandingFees)}</Text><Text style={styles.tileCaption}>إجمالي المتبقي من اتفاقات العملاء</Text></LuxeCard>
+        <LuxeCard><SectionTitle icon="wallet-outline" title="الأتعاب المتبقية"/><Text style={styles.tileValue}>{isUnlocked() ? money(snapshot.outstandingFees) : 'البيانات المحلية مقفلة'}</Text><Text style={styles.tileCaption}>الأتعاب المسجلة على هذا الجهاز؛ افتح البيانات المحلية من المزيد لعرضها</Text></LuxeCard>
         <LuxeCard>
           <SectionTitle icon="calendar-outline" title="جدول اليوم" action="عرض الكل" onAction={() => router.push('/(tabs)/calendar')}/>
-          {agenda.length ? <Timeline items={agenda}/> : <EmptyState title="لا توجد جلسات اليوم" message="أضف موعداً من مسار القضية ليظهر هنا وفي التقويم."/>}
+          {agenda.length ? <Timeline items={agenda}/> : <EmptyState title={data.remoteAvailable ? "لا توجد جلسات اليوم" : "المواعيد تحتاج اتصالاً"} message={data.remoteAvailable ? "أضف موعداً من مسار القضية ليظهر هنا وفي التقويم." : "تعذر تحديث المواعيد من خادم المكتب."}/>}
         </LuxeCard>
         <LuxeCard>
           <SectionTitle icon="notifications" title="آخر النشاط"/>
@@ -79,7 +91,7 @@ export default function DashboardScreen() {
             <Text style={styles.alertWhen}>{a.when}</Text>
           </Pressable>)}
         </LuxeCard>
-        <Text style={styles.disclaimer}>أعداد العملاء والقضايا من خادم المكتب. الجلسات والمهل والأتعاب والنشاط من بيانات هذا الجهاز فقط ولا تتم مزامنتها بعد.</Text>
+        <Text style={styles.disclaimer}>العملاء والقضايا محفوظة محلياً وتُزامن. المواعيد والمهل والنشاط تحتاج اتصالاً بالخادم؛ الأتعاب من هذا الجهاز فقط.</Text>
       </Sheet>
     </ScrollView>
   </View>;

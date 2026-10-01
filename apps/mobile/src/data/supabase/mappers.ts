@@ -15,9 +15,9 @@ export const clientStatuses = { ACTIVE: 'active', INACTIVE: 'inactive', ARCHIVED
 export const matterStatuses = { ACTIVE: 'open', ON_HOLD: 'on_hold', CLOSED: 'closed', ARCHIVED: 'archived' } as const satisfies Record<MatterStatus, Enums['matter_status']>;
 export const matterTypes = {
   CRIMINAL: 'criminal', CIVIL: 'civil', PERSONAL_STATUS: 'personal_status', LABOUR: 'labour', SPECIAL_COURT: 'special_court',
-  COMMERCIAL_REGISTRY: 'commercial_registry', LAND_REGISTRY: 'land_registry', NOTARIZATION: 'notarization', OTHER: 'other',
+  COMMERCIAL_REGISTRY: 'commercial_registry', LAND_REGISTRY: 'land_registry', NOTARIZATION: 'notarization', COMMERCIAL: 'commercial', ADMINISTRATIVE: 'administrative', REAL_ESTATE: 'real_estate', CONSULTATION: 'consultation', OTHER: 'other',
 } as const satisfies Record<MatterType, Enums['matter_type']>;
-const partyRoles = { CLIENT: 'client', OPPONENT: 'opponent', WITNESS: 'witness', OTHER: 'other' } as const satisfies Record<MatterParty['role'], Enums['party_role']>;
+const partyRoles = { CLIENT: 'client', OPPONENT: 'opponent', WITNESS: 'witness', EXPERT: 'expert', OTHER: 'other' } as const satisfies Record<MatterParty['role'], Enums['party_role']>;
 
 export function inverse<K extends string, V extends string>(map: Record<K, V>): Map<string, K> {
   return new Map((Object.entries(map) as [K, V][]).map(([key, value]) => [value, key]));

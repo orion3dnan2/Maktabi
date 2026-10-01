@@ -5,6 +5,11 @@
     "lint": { "dependsOn": ["^lint"] },
     "typecheck": { "dependsOn": ["^typecheck"] },
     "test": { "dependsOn": ["^test"], "outputs": ["coverage/**"] },
-    "build": { "dependsOn": ["^build"], "outputs": ["dist/**", ".expo/**"] }
+    "build": {
+      "dependsOn": ["^build"],
+      "env": ["EXPO_PUBLIC_SUPABASE_URL", "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY"],
+      "inputs": ["$TURBO_DEFAULT$", ".env", ".env.*"],
+      "outputs": ["dist/**", ".expo/**"]
+    }
   }
 }

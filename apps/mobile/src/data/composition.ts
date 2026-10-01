@@ -4,6 +4,8 @@ import { builtinProcedures, type ProcedureStage, type ProcedureTemplate } from '
 import type { SupabaseMatterRepository } from './supabase/matterRepository';
 import type { ServerWorkflow, SupabaseWorkflowRepository } from './supabase/workflowRepository';
 import type { MatterWorkflow } from './workflow';
+import { emptyWorkflow } from './workflow';
+import { RepositoryError } from './supabase/errors';
 
 type Device = ReturnType<typeof createLocalRepositories>;
 type DeviceOffice = Device['officeRepository'];
@@ -46,8 +48,13 @@ export function composeRepositories({ server, matters, device, unlocked }: Compo
 
   /** Adds each matter's next scheduled appointment and current stage (server); the matter itself is unchanged. */
   const withProgress = async (list: Matter[]): Promise<Matter[]> => {
-    const progress = await server.progress(list.map((m) => m.id));
-    return list.map((m) => ({ ...m, ...progress.get(m.id) }));
+    try {
+      const progress = await server.progress(list.map((m) => m.id));
+      return list.map((m) => ({ ...m, ...progress.get(m.id) }));
+    } catch (error) {
+      if (error instanceof RepositoryError && error.kind === 'connection') return list;
+      throw error;
+    }
   };
 
   const matterRepository: SupabaseMatterRepository = {
@@ -62,12 +69,12 @@ export function composeRepositories({ server, matters, device, unlocked }: Compo
 
   const workflowRepository = {
     async getByMatter(id: string): Promise<MatterWorkflow> {
-      const local = onDevice();
-      const [remote, onThisDevice] = await Promise.all([server.getByMatter(id), local.workflowRepository.getByMatter(id)]);
+      if (!await matters.getById(id)) throw new Error('القضية غير موجودة أو لا تملك صلاحية الوصول إليها');
+      const [remote, onThisDevice] = await Promise.all([server.getByMatter(id), unlocked() ? device().workflowRepository.getByMatter(id) : emptyWorkflow()]);
       return mergeWorkflow(remote, onThisDevice);
     },
     /** Only the part kept on this device (fees, receipts, documents): for totals over many matters. */
-    getOnDevice: async (id: string) => onDevice().workflowRepository.getByMatter(id),
+    getOnDevice: async (id: string) => unlocked() ? device().workflowRepository.getByMatter(id) : emptyWorkflow(),
     addAppointment: server.addAppointment,
     setAppointmentStatus: server.setAppointmentStatus,
     finishSession: server.finishSession,

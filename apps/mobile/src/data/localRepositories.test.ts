@@ -1,24 +1,41 @@
 import { describe, expect, it } from 'vitest';
-import type { Client, Matter } from '@maktabi/domain';
 import { createLocalRepositories } from './localRepositories';
-const client: Client = { id: 'c', officeId: 'cloud-office', kind: 'PERSON', displayName: 'عدنان', phone: '+249900000001', whatsapp: '+249900000001', createdAt: '2026-09-30' };
-const matter: Matter = { id: 'm', officeId: 'cloud-office', title: 'ملف مشترك', reference: 'FILE-1', type: 'CIVIL', status: 'ACTIVE', authority: 'محكمة', openedAt: '2026-09-30', details: {}, parties: [{ id: 'p', matterId: 'm', clientId: 'c', displayName: 'عدنان', role: 'CLIENT', isPrimary: true }] };
-describe('legacy workflow bridge to shared cases', () => {
-  it('starts empty and retains local appointments, notes and receipts through hydration and restart', async () => {
+import { emptyWorkflow } from './workflow';
+import { fakeMatterSource, fakeStageSource, serverMatter } from '../test/fakeMatters';
+import { readLegacySnapshot } from './legacyImport';
+
+describe('integrated local finance and legacy recovery', () => {
+  it('keeps financial records through restart and rolls back failed storage writes', async () => {
     let raw: string | null = null;
+    let fail = false;
+    const storage = { async getItem() { return raw; }, async setItem(_key: string, value: string) { if (fail) throw new Error('disk full'); raw = value; } };
+    const source = fakeMatterSource([serverMatter('m1')]);
+    const r = createLocalRepositories(storage, source.source, fakeStageSource());
+    await r.workflowRepository.setFees('m1', 10000);
+    await r.workflowRepository.recordPayment('m1', { id: 'r', number: 'R1', amount: 2000, method: 'نقدي', date: '2026-10-01' });
+    fail = true;
+    await expect(r.workflowRepository.setFees('m1', 50000)).rejects.toThrow('disk full');
+    expect((await r.workflowRepository.getByMatter('m1')).agreedFees).toBe(10000);
+    const restarted = createLocalRepositories(storage, source.source, fakeStageSource());
+    expect((await restarted.workflowRepository.getByMatter('m1')).receipts).toHaveLength(1);
+  });
+
+  it('recovers explicitly linked legacy finance without deleting original notes or appointments', async () => {
+    const original = { version: 1, clients: [], matters: [serverMatter('old')], profiles: [], workflows: [['old', {
+      ...emptyWorkflow(), agreedFees: 7000, notes: [{ id: 'n', text: 'ملاحظة محفوظة', date: '2026-09-30' }],
+      appointments: [{ id: 'a', title: 'جلسة قديمة', startsAt: '2026-10-05T09:00:00Z', kind: 'COURT_SESSION', status: 'SCHEDULED' }],
+    }]] };
+    let raw = JSON.stringify(original);
     const storage = { async getItem() { return raw; }, async setItem(_key: string, value: string) { raw = value; } };
-    let current = { clients: [client], matters: [matter] };
-    const shared = async () => structuredClone(current);
-    const r = createLocalRepositories(storage, shared);
-    expect(await r.clientRepository.getById('c1')).toBeNull();
-    await r.workflowRepository.addAppointment('m', { title: 'جلسة', startsAt: '2026-10-05T09:00:00Z' });
-    await r.workflowRepository.addNote('m', 'ملاحظة محلية محفوظة');
-    await r.workflowRepository.setFees('m', 10000);
-    await r.workflowRepository.recordPayment('m', { id: 'receipt', number: 'R-1', amount: 2000, method: 'نقدي', date: '2026-09-30T10:00:00Z' });
-    current = { clients: [client], matters: [{ ...matter, title: 'عنوان جديد من الخادم' }] };
-    const restarted = createLocalRepositories(storage, shared);
-    expect(await restarted.matterRepository.getById('m')).toMatchObject({ title: 'عنوان جديد من الخادم', nextEventAt: '2026-10-05T09:00:00.000Z', currentStage: 'ملاحظة محلية محفوظة' });
-    expect((await restarted.workflowRepository.getByMatter('m')).receipts).toHaveLength(1);
-    expect(await restarted.profileRepository.getByClient('c')).toMatchObject({ agreedFees: 10000, paidFees: 2000 });
+    const source = fakeMatterSource([serverMatter('new'), serverMatter('other')]);
+    const r = createLocalRepositories(storage, source.source, fakeStageSource(), async id => id === 'new' ? 'old' : undefined);
+    expect((await r.workflowRepository.getByMatter('other')).agreedFees).toBe(0);
+    expect((await r.workflowRepository.getByMatter('new')).agreedFees).toBe(7000);
+    await r.workflowRepository.setFees('new', 8000);
+    expect(JSON.parse(raw).version).toBe(2);
+    expect(readLegacySnapshot(JSON.parse(raw)).workflows).toEqual(original.workflows);
+    const restarted = createLocalRepositories(storage, source.source, fakeStageSource());
+    expect((await restarted.workflowRepository.getByMatter('new')).agreedFees).toBe(8000);
+    expect(await storage.getItem()).toBe(raw);
   });
 });

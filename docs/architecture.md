@@ -1,11 +1,7 @@
 # Architecture
 
-The mobile UI depends on domain repository interfaces, never directly on an HTTP API. Batch 1 injects an in-memory mock repository. The intended evolution is:
+The current architecture is maintained in [MAKTABI_ARCHITECTURE.md](MAKTABI_ARCHITECTURE.md). Implementation state is in [IMPLEMENTATION_ROADMAP.md](IMPLEMENTATION_ROADMAP.md).
 
-`React Native UI → domain services → repositories → local SQLite → sync engine → API → PostgreSQL`
+Updated 2026-10-01: production clients, cases and assignments use encrypted offline storage with a durable outbox and Supabase/RLS synchronization. Appointments, stages, deadlines, notes, templates and activity use Supabase directly and currently need a connection. Finance, documents and office settings remain in the user's encrypted vault, with legacy preservation and verified import mappings.
 
-Future local adapters should use `expo-sqlite`; authentication secrets should use platform secure storage. Tenant/office identifiers are present on aggregate roots to prepare for isolation, but tenant enforcement, encryption, RBAC enforcement, audit logging, backup, and synchronization are **not implemented** and must not be represented as complete.
-
-Financial concepts remain separate: fee payments, third-party expenses, and client-trust entries. Receipts are cancelled rather than deleted, and replacement receipts receive a new identifier and number.
-
-Batch 2 adds `ClientRepository` and `MatterRepository` session-local mock adapters. A Matter owns an array of `MatterParty` relationships, with exactly one primary registered client and optional additional clients/other parties. `listByClient` considers every relationship, not just the primary party. Profile summary fixtures keep fees, trust and expenses separate. See [Batch 2 audit](batch-2-audit.md) for routes, limitations and review instructions.
+The old Batch 1/2 mock adapters are test fixtures, not production data sources. See [integration verification](verification/trial-integration-2026-10-01.md) for current evidence and release limits.

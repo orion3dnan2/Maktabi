@@ -64,5 +64,5 @@ export function useUnsavedChanges(dirty: boolean) {
 export const money = (minor: number) =>
   `${new Intl.NumberFormat("ar-SD").format(minor / 100)} ج.س`;
 export const demoNotice =
-  "العملاء والقضايا تُحفظ محلياً وتُزامن مع المكتب؛ بقية العمليات المحلية لم تُنقل بعد.";
+  "العملاء والقضايا تُحفظ محلياً وتُزامن؛ المواعيد والإجراءات تحتاج اتصالاً؛ المالية والمرفقات على هذا الجهاز فقط.";
 

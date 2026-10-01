@@ -6,8 +6,7 @@ import { useAuth } from '@/auth/AuthProvider';
 import { can } from '@/auth/permissions';
 import { isUnlocked, vaultStorage } from '@/data/vault';
 import { STORAGE_KEY } from '@/data/localRepositories';
-import type { RepositorySnapshot } from '@/data/mockRepositories';
-import { prepareLegacyImport } from '@/data/legacyImport';
+import { prepareLegacyImport, readLegacySnapshot } from '@/data/legacyImport';
 import { sharedEngine } from '@/data/sharedRepositories';
 import { useResource } from '@/features/shared/hooks';
 import { useOperation } from '@/features/shared/useOperation';
@@ -15,7 +14,7 @@ import { useOperation } from '@/features/shared/useOperation';
 async function stableId(key:string){const hash=await digestStringAsync(CryptoDigestAlgorithm.SHA256,key);return `${hash.slice(0,8)}-${hash.slice(8,12)}-5${hash.slice(13,16)}-a${hash.slice(17,20)}-${hash.slice(20,32)}`;}
 export default function ImportScreen(){
   const router=useRouter();const {access}=useAuth();const [clients,setClients]=useState<string[]>([]);const [matters,setMatters]=useState<string[]>([]);const [confirmed,setConfirmed]=useState(false);
-  const resource=useResource(useCallback(async()=>{if(!isUnlocked())throw new Error('افتح البيانات المحلية القديمة أولاً');const raw=await vaultStorage.getItem(STORAGE_KEY);if(!raw)throw new Error('لا توجد بيانات محلية');const snapshot=JSON.parse(raw) as RepositorySnapshot;if(snapshot.version!==1 || !Array.isArray(snapshot.clients) || !Array.isArray(snapshot.matters))throw new Error('صيغة النسخة غير صحيحة');return snapshot;},[]));
+  const resource=useResource(useCallback(async()=>{if(!isUnlocked())throw new Error('افتح البيانات المحلية القديمة أولاً');const raw=await vaultStorage.getItem(STORAGE_KEY);if(!raw)throw new Error('لا توجد بيانات محلية');return readLegacySnapshot(JSON.parse(raw));},[]));
   const op=useOperation();const toggle=(id:string,current:string[],set:(ids:string[])=>void)=>{set(current.includes(id)?current.filter(value=>value!==id):[...current,id]);setConfirmed(false);};
   if(!can(access,'manage_team'))return <FormPage title="نقل البيانات السابقة"><BodyText>النقل متاح لمدير المكتب فقط.</BodyText></FormPage>;
   return <FormPage title="نقل العملاء والقضايا السابقة"><Button label="رجوع" variant="secondary" onPress={()=>router.back()}/>

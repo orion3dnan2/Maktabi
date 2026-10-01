@@ -1333,6 +1333,10 @@ export type Database = {
         Args: { p_actor: string; p_target: string }
         Returns: boolean
       }
+      svc_consume_office_request_attempt: {
+        Args: { p_source_hash: string }
+        Returns: string
+      }
       svc_create_office: {
         Args: {
           p_actor: string
