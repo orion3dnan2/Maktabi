@@ -29,7 +29,7 @@ export default function OwnerSetupScreen() {
   return <AuthLayout title="إعداد مالك المنصة" subtitle="يُستخدم مرة واحدة فقط لإنشاء حسابك كمالك للمنصة. بعدها تنشئ المكاتب ومديريها من داخل التطبيق.">
     <AuthField icon="key-outline" value={code} onChangeText={setCode} placeholder="رمز الإعداد" autoCapitalize="characters" autoCorrect={false} accessibilityLabel="رمز الإعداد" style={{ writingDirection: 'ltr' }}/>
     <AuthField icon="person-outline" value={name} onChangeText={setName} placeholder="الاسم الكامل" accessibilityLabel="الاسم الكامل"/>
-    <AuthField icon="call-outline" value={phone} onChangeText={setPhone} placeholder="رقم الهاتف مع رمز الدولة" keyboardType="phone-pad" autoComplete="tel" accessibilityLabel="رقم الهاتف" style={{ writingDirection: phone ? 'ltr' : 'rtl' }}/>
+    <AuthField icon="call-outline" value={phone} onChangeText={setPhone} placeholder="رقم الهاتف السوداني" keyboardType="phone-pad" autoComplete="tel" accessibilityLabel="رقم الهاتف" style={{ writingDirection: phone ? 'ltr' : 'rtl' }}/>
     <AuthField icon="lock-closed-outline" value={password} onChangeText={setPassword} secureTextEntry={!visible} placeholder="كلمة المرور" autoComplete="new-password" accessibilityLabel="كلمة المرور" end={eye}/>
     <AuthField icon="lock-closed-outline" value={confirmation} onChangeText={setConfirmation} secureTextEntry={!visible} placeholder="تأكيد كلمة المرور" autoComplete="new-password" accessibilityLabel="تأكيد كلمة المرور" onSubmitEditing={() => void submit()}/>
     <Text style={authStyles.note}>كلمة المرور {MIN_PASSWORD_LENGTH} أحرف على الأقل. رمز الإعداد يصلك من مطوّر المنصة ويعمل مرة واحدة.</Text>

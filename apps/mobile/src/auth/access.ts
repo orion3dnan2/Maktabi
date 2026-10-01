@@ -19,6 +19,9 @@ export const roleLabels: Record<OfficeRole, string> = {
 };
 
 export const isStaff = (a: Access | undefined) => !!a?.role && a.role !== 'client' && a.is_active && a.office?.status === 'active';
+export const canUseMatters = (a: Access | undefined) => can(a, 'view_cases');
+export const canEditClientDetails = (a: Access | undefined) => isStaff(a) && a?.role !== 'reception';
+export const canReassignMatters = (a: Access | undefined) => can(a, 'assign_cases');
 
 /** Why this account cannot use the app, or null if it can. */
 export function accessProblem(a: Access | null | undefined): string | null {

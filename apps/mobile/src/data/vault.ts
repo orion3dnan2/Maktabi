@@ -3,11 +3,12 @@ import { getRandomBytesAsync } from 'expo-crypto';
 import { normalizeArabic } from '@maktabi/domain';
 import { bytesToHex, decryptText, encryptText, hexToBytes, isValidIterations, KDF_ITERATIONS, LEGACY_KDF_ITERATIONS, passwordKey, type CipherEnvelope } from './crypto';
 import { STORAGE_KEY, type LocalStorage } from './localRepositories';
-import { defaultOffice } from './office';
+import { emptySnapshot, isLocalSnapshot } from './localStore';
 
 const LEGACY_VAULT_KEY = 'maktabi:vault:v1';
 // Each signed-in office user gets their own encrypted workspace on the device,
-// unlocked with their login phone + password (until office data moves to Supabase).
+// unlocked with their login phone + password. Since Phase 2 it holds only device-local data
+// (matter workflows and office settings); clients and matters are in Supabase.
 let VAULT_KEY = LEGACY_VAULT_KEY;
 interface Vault { version: 1; phone: string; salt: string; kdf?: { iterations: number }; wrappedKey: CipherEnvelope; data: CipherEnvelope }
 let unlocked: { key: Uint8Array; vault: Vault } | undefined;
@@ -35,10 +36,9 @@ export async function createVault(phoneInput: string, password: string) {
     if (await hasVault()) throw new Error('تم إعداد المكتب بالفعل؛ سجل الدخول');
     const phone = normalizePhone(phoneInput); if (!/^\+?\d{7,15}$/.test(phone)) throw new Error('أدخل رقم هاتف صحيحاً'); checkPassword(password);
     const salt = await getRandomBytesAsync(16); const key = await getRandomBytesAsync(32); const derived = await passwordKey(password, salt, KDF_ITERATIONS);
-    // An unscoped pre-account dataset must never be copied into a different signed-in user's vault.
-    const legacy = VAULT_KEY === LEGACY_VAULT_KEY ? await AsyncStorage.getItem(STORAGE_KEY) : null;
+    const legacy = await AsyncStorage.getItem(STORAGE_KEY);
     // Commit the encrypted copy before removing the legacy key. A failed write leaves the original intact.
-    const initial = legacy ?? JSON.stringify({ version: 1, clients: [], matters: [], profiles: [], workflows: [], office: defaultOffice() });
+    const initial = legacy ?? JSON.stringify(emptySnapshot());
     const vault: Vault = { version: 1, phone, salt: bytesToHex(salt), kdf: { iterations: KDF_ITERATIONS }, wrappedKey: encryptText(bytesToHex(key), derived, await getRandomBytesAsync(12)), data: encryptText(initial, key, await getRandomBytesAsync(12)) };
     derived.fill(0); await AsyncStorage.setItem(VAULT_KEY, JSON.stringify(vault)); unlocked = { key, vault };
     if (legacy) await AsyncStorage.removeItem(STORAGE_KEY);
@@ -92,7 +92,7 @@ export async function restoreEncryptedBackup(raw: string, phone: string, passwor
     const v = JSON.parse(raw) as Vault;
     if (v.version !== 1 || v.phone !== normalizePhone(phone) || typeof v.salt !== 'string' || v.salt.length !== 32 || !validKdf(v)) throw new Error('بيانات النسخة الاحتياطية غير صحيحة');
     derived = await passwordKey(password, hexToBytes(v.salt), iterationsOf(v)); key = hexToBytes(decryptText(v.wrappedKey, derived));
-    const data = decryptText(v.data, key); if (data) { const snapshot = JSON.parse(data); if (snapshot.version !== 1 || !Array.isArray(snapshot.clients) || !Array.isArray(snapshot.matters)) throw new Error('بيانات المكتب غير صالحة'); }
+    const data = decryptText(v.data, key); if (data && !isLocalSnapshot(JSON.parse(data))) throw new Error('بيانات المكتب غير صالحة');
     await AsyncStorage.setItem(VAULT_KEY, JSON.stringify(v)); lockVault();
   } finally { derived?.fill(0); key?.fill(0); operation = false; }
 }

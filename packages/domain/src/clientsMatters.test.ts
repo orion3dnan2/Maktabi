@@ -18,8 +18,8 @@ const client: Client = {
   officeId: "o1",
   displayName: "أَمـجد إدريس",
   kind: "PERSON",
-  phone: "+249000000101",
-  whatsapp: "+249000000101",
+  phone: "+249912000101",
+  whatsapp: "+249912000101",
   createdAt: "2026-09-24T00:00:00Z",
 };
 const matter: Matter = {
@@ -93,7 +93,7 @@ describe("client validation and Arabic search", () => {
     expect(normalizeArabic(" أَمـجد إدريس ١٢٣ ")).toBe("امجد ادريس 123");
     expect(normalizeArabic("على")).toBe("علي");
     expect(filterClients([client], "امجد ادريس")).toHaveLength(1);
-    expect(filterClients([client], "٠٠٠٠٠٠١٠١")).toHaveLength(1);
+    expect(filterClients([client], "٩١٢٠٠٠١٠١")).toHaveLength(1);
   });
   it("combines query and type without mutating the input", () => {
     expect(filterClients([client], "امجد", "ORGANIZATION")).toEqual([]);
@@ -248,5 +248,27 @@ describe("matter filtering and ordering", () => {
       "m2",
     );
     expect(source[0]?.id).toBe("m1");
+  });
+});
+describe("limits shared with the database", () => {
+  it("accepts Sudanese phone numbers only, in any local or international form", () => {
+    for (const phone of ["+249 91 200 0101", "00249912000101", "0912000101", "912000101", "٠٩١٢٠٠٠١٠١"])
+      expect(validateClient({ ...client, phone, whatsapp: phone })).toEqual({});
+    for (const phone of ["+96551325559", "51325559", "+971501234567", "+249012000101", "09120001O1"])
+      expect(validateClient({ ...client, phone }).phone).toBe("أدخل رقم هاتف سودانياً صحيحاً");
+  });
+  it("accepts a Sudanese national number of 3 to 50 digits only", () => {
+    expect(validateClient({ ...client, nationalId: "12345678901" })).toEqual({});
+    expect(validateClient({ ...client, nationalId: "١٢٣ ٤٥٦" })).toEqual({});
+    expect(validateClient({ ...client, nationalId: "۱۲۳۴" })).toEqual({});
+    expect(validateClient({ ...client, nationalId: "  " })).toEqual({});
+    expect(validateClient({ ...client, nationalId: "12" }).nationalId).toBe("الرقم الوطني من 3 إلى 50 رقماً");
+    expect(validateClient({ ...client, nationalId: "1".repeat(51) }).nationalId).toBeTruthy();
+    for (const bad of ["AB123", "123-456", "12.345"])
+      expect(validateClient({ ...client, nationalId: bad }).nationalId).toBe("الرقم الوطني أرقام فقط");
+  });
+  it("limits the matter reference to 50 characters, like matters.matter_number", () => {
+    expect(validateMatter({ ...matter, reference: "x".repeat(50) })).toEqual({});
+    expect(validateMatter({ ...matter, reference: "x".repeat(51) }).reference).toBeTruthy();
   });
 });

@@ -1,5 +1,11 @@
-import type { Client, Matter, MatterStatus, MatterType } from "./index";
+import type { Client, ClientStatus, Matter, MatterStatus, MatterType } from "./index";
+import { normalizePhone } from "./phone";
 export const clientKinds = { PERSON: "فرد", ORGANIZATION: "شركة / مؤسسة" };
+export const clientStatuses: Record<ClientStatus, string> = {
+  ACTIVE: "نشط",
+  INACTIVE: "غير نشط",
+  ARCHIVED: "مؤرشف",
+};
 export const matterTypes: Record<MatterType, string> = {
   CRIMINAL: "جنائية",
   CIVIL: "مدنية",
@@ -101,16 +107,22 @@ export function validateClient(c: Client): FieldErrors {
   const e: FieldErrors = {};
   if (!c.displayName.trim()) e.displayName = "الاسم مطلوب";
   if (!Object.hasOwn(clientKinds, c.kind)) e.kind = "اختر نوع العميل";
+  // Phone numbers are Sudanese only (+249); the database enforces the same rule.
   for (const key of ["phone", "whatsapp"] as const) {
     if (!c[key]?.trim()) e[key] = "الرقم مطلوب";
-    else if (
-      !/^\+?[\d\s()-]{7,25}$/.test(normalizeArabic(c[key]!)) ||
-      !/^\d{7,15}$/.test(normalizeArabic(c[key]!).replace(/\D/g, ""))
-    )
-      e[key] = "أدخل رقماً صحيحاً";
+    else if (!normalizePhone(c[key]!)) e[key] = "أدخل رقم هاتف سودانياً صحيحاً";
   }
   if (c.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email))
     e.email = "البريد الإلكتروني غير صحيح";
+  // The Sudanese national number is digits only; mirrors the database rules
+  // clients_national_id_digits and clients_identity_complete (3 to 50 characters).
+  const nationalId = normalizeArabic(c.nationalId ?? "")
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/\s+/g, "");
+  if (nationalId && !/^[0-9]+$/.test(nationalId))
+    e.nationalId = "الرقم الوطني أرقام فقط";
+  else if (nationalId && (nationalId.length < 3 || nationalId.length > 50))
+    e.nationalId = "الرقم الوطني من 3 إلى 50 رقماً";
   if (c.kind === "ORGANIZATION")
     for (const key of ["contactPerson", "email", "address"] as const)
       if (!c[key]?.trim()) e[key] = "هذا الحقل مطلوب للشركة";
@@ -127,6 +139,8 @@ export function validateMatter(m: Matter): FieldErrors {
   const e: FieldErrors = {};
   for (const key of ["reference", "title", "authority"] as const)
     if (!m[key]?.trim()) e[key] = "هذا الحقل مطلوب";
+  // Mirrors the database limit on matters.matter_number.
+  if (m.reference.trim().length > 50) e.reference = "رقم الملف لا يتجاوز 50 حرفاً";
   if (!Object.hasOwn(matterTypes, m.type)) e.type = "اختر نوع الملف";
   if (!Object.hasOwn(matterStatuses, m.status)) e.status = "اختر حالة الملف";
   if (!validDate(m.openedAt))

@@ -8,6 +8,8 @@ import { SyncEngine } from './sync/engine';
 import type { AssignmentCommand } from './sync/types';
 import { canonicalClient } from './clientFields';
 import { forgetAccess } from '../auth/offlineAccess';
+import type { SupabaseClientRepository } from './supabase/clientRepository';
+import type { SupabaseMatterRepository } from './supabase/matterRepository';
 
 export let OFFICE_ID = '';
 let active: { engine: SyncEngine; access: Access } | undefined;
@@ -24,9 +26,12 @@ export async function initializeSharedSession(access:Access) {
   active={engine,access}; await engine.sync(); engine.assertAccess();
 }
 const requireOffice = (officeId:string) => { if(officeId!==OFFICE_ID || !active) throw new Error('المكتب غير صحيح'); return sharedEngine(); };
-export const sharedClientRepository:ClientRepository = {
+export const sharedClientRepository:SupabaseClientRepository = {
   async getById(id) { return (await sharedEngine().store.read()).clients[id]?.value??null; },
-  async listByOffice(id) { return Object.values((await requireOffice(id).store.read()).clients).map(r=>r.value); },
+  async listByOffice(id) { return Object.values((await requireOffice(id).store.read()).clients).map(r=>r.value).filter(c=>c.status!=='ARCHIVED'); },
+  async listArchived(id) { return Object.values((await requireOffice(id).store.read()).clients).map(r=>r.value).filter(c=>c.status==='ARCHIVED'); },
+  async count() { return (await this.listByOffice(OFFICE_ID)).length; },
+  async setStatus(id, status) { const client = await this.getById(id); if (!client) throw new Error('العميل غير موجود'); await this.save({...client, status}); },
   async save(client) {
     if(!can(active?.access,'create_clients')) throw new Error('لا تملك صلاحية حفظ العميل');
     client = canonicalClient(client);
@@ -34,7 +39,9 @@ export const sharedClientRepository:ClientRepository = {
     await requireOffice(client.officeId).save('client',client,client.id);
   },
 };
-export const sharedMatterRepository:MatterRepository = {
+export const sharedMatterRepository:SupabaseMatterRepository = {
+  async setStatus(id, status) { const matter = await this.getById(id); if (!matter) throw new Error('القضية غير موجودة'); await this.save({...matter, status}); },
+  async listAssignableLawyers() { return (await sharedEngine().store.read()).members.filter(m=>m.status==='active' && ['admin','lawyer'].includes(m.role)).map(m=>({id:m.id,fullName:m.fullName})); },
   async getById(id) { return (await sharedEngine().store.read()).matters[id]?.value??null; },
   async listByOffice(id) { return Object.values((await requireOffice(id).store.read()).matters).map(r=>r.value); },
   async listByClient(id) { return Object.values((await sharedEngine().store.read()).matters).map(r=>r.value).filter(m=>m.parties.some(p=>p.clientId===id)); },
