@@ -46,12 +46,6 @@ export default function ClientFormScreen() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
-  useEffect(() => {
-    if (resource.data && !client) {
-      setClient(resource.data);
-      setOriginal(JSON.stringify(resource.data));
-    }
-  }, [resource.data, client]);
   const { cancel, confirmation } = useUnsavedChanges(
     !saved && !!client && JSON.stringify(client) !== original,
   );
@@ -59,6 +53,11 @@ export default function ClientFormScreen() {
     if (saved && client)
       router.replace({ pathname: "/clients/[id]", params: { id: client.id } });
   }, [saved, client, router]);
+  // Initialize once from the loaded record; background pulls must not replace an edited draft.
+  if (resource.data && !client) {
+    setClient(resource.data);
+    setOriginal(JSON.stringify(resource.data));
+  }
   if (resource.error)
     return (
       <FormPage title="بيانات العميل">

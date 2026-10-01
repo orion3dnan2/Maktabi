@@ -1,0 +1,115 @@
+-- Direct database/RLS checks run as authenticated callers; all fixtures rolled back.
+begin;
+do $test$
+declare owner_id uuid:=gen_random_uuid(); admin_a uuid:=gen_random_uuid(); lawyer_a uuid:=gen_random_uuid(); employee_a uuid:=gen_random_uuid(); reception_a uuid:=gen_random_uuid(); admin_b uuid:=gen_random_uuid();
+office_a uuid; office_b uuid; client_a uuid:=gen_random_uuid(); matter_a uuid:=gen_random_uuid(); client_b uuid:=gen_random_uuid();
+operation_id uuid:=gen_random_uuid(); r integer; n integer; blocked boolean;
+client_payload jsonb; matter_payload jsonb; compatibility_type text; compatibility_id uuid; compatibility_payload jsonb;
+begin
+ insert into auth.users(id,email,aud,role,instance_id) select id,'test-'||id::text||'@phone.maktabi.invalid','authenticated','authenticated','00000000-0000-0000-0000-000000000000'
+ from unnest(array[owner_id,admin_a,lawyer_a,employee_a,reception_a,admin_b]) id;
+ insert into private.platform_admins(user_id) values(owner_id);
+ office_a:=public.svc_create_office(owner_id,admin_a,'Test Admin A','+249900000101','Test Office A',null,null);
+ office_b:=public.svc_create_office(owner_id,admin_b,'Test Admin B','+249900000102','Test Office B',null,null);
+ perform public.svc_add_member(admin_a,lawyer_a,'lawyer','Test Lawyer','+249900000103');
+ perform public.svc_add_member(admin_a,employee_a,'employee','Test Employee','+249900000104');
+ perform public.svc_add_member(admin_a,reception_a,'reception','Test Reception','+249900000105');
+ if not exists(select 1 from public.office_members where office_id=office_a and user_id=admin_a and created_by=owner_id)
+ or not exists(select 1 from public.office_members where office_id=office_a and user_id=lawyer_a and created_by=admin_a) then raise exception 'FAIL membership creator stamp'; end if;
+ update public.office_members set status='suspended' where office_id=office_a and user_id=admin_a;
+ blocked:=false;
+ begin perform public.svc_add_member(admin_a,owner_id,'lawyer','Must be denied','+249900000109'); exception when insufficient_privilege then blocked:=true; end;
+ if not blocked then raise exception 'FAIL suspended admin adds members'; end if;
+ update public.office_members set status='active' where office_id=office_a and user_id=admin_a;
+ insert into public.clients(id,office_id,full_name) values(client_b,office_b,'Other office client');
+ client_payload:=jsonb_build_object('displayName','Shared Client','kind','PERSON','phone','+249900000110','whatsapp','+249900000110','nationalId','123456789','email','person@example.com');
+ matter_payload:=jsonb_build_object('reference','TEST-1','title','Shared Matter','type','CIVIL','status','ACTIVE','authority','Test Court','openedAt','2026-09-30','details','{}'::jsonb,
+ 'parties',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'matterId',matter_a,'clientId',client_a,'displayName','Shared Client','role','CLIENT','isPrimary',true)));
+ perform set_config('request.jwt.claim.sub',admin_a::text,true); execute 'set local role authenticated';
+ r:=public.sync_client(operation_id,office_a,client_a,0,client_payload);
+ if r<>1 then raise exception 'FAIL client initial revision'; end if;
+ if not exists(select 1 from public.clients where id=client_a and civil_id='123456789' and id_type='national_id' and created_by=admin_a) then raise exception 'FAIL identity or actor stamp'; end if;
+ if public.sync_client(operation_id,office_a,client_a,0,client_payload)<>1 then raise exception 'FAIL idempotency'; end if;
+ select count(*) into n from public.clients where id=client_a; if n<>1 then raise exception 'FAIL duplicate'; end if;
+ blocked:=false;
+ begin perform public.sync_client(gen_random_uuid(),office_a,client_a,0,client_payload); exception when sqlstate 'PT409' then blocked:=true; end;
+ if not blocked then raise exception 'FAIL stale revision accepted'; end if;
+ r:=public.sync_matter(gen_random_uuid(),office_a,matter_a,0,matter_payload);
+ if r<>1 then raise exception 'FAIL case creation'; end if;
+ foreach compatibility_type in array array['COMMERCIAL','ADMINISTRATIVE','REAL_ESTATE','CONSULTATION'] loop
+  compatibility_id:=gen_random_uuid();
+  compatibility_payload:=matter_payload || jsonb_build_object('type',compatibility_type,'reference','COMPAT-'||compatibility_type,
+   'parties',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'clientId',client_a,'role','CLIENT','isPrimary',true),
+   jsonb_build_object('id',gen_random_uuid(),'displayName','Existing expert role','role','EXPERT','isPrimary',false)));
+  compatibility_payload:=compatibility_payload || jsonb_build_object('details',jsonb_build_object('legacy_nested',jsonb_build_object('reference','preserved'),'legacy_number',7));
+  r:=public.sync_matter(gen_random_uuid(),office_a,compatibility_id,0,compatibility_payload);
+  if r<>1 or not exists(select 1 from public.matters where id=compatibility_id and matter_type::text=lower(compatibility_type))
+   or not exists(select 1 from public.matter_parties where matter_id=compatibility_id and party_role='expert') then raise exception 'FAIL existing type/role preservation'; end if;
+  r:=public.sync_matter(gen_random_uuid(),office_a,compatibility_id,1,compatibility_payload || jsonb_build_object('details','{}'::jsonb));
+  if r<>2 or not exists(select 1 from public.matters where id=compatibility_id and details->>'legacy_number'='7' and details#>>'{legacy_nested,reference}'='preserved') then raise exception 'FAIL existing structured details lost'; end if;
+ end loop;
+ blocked:=false;
+ begin perform public.sync_matter(gen_random_uuid(),office_a,gen_random_uuid(),0,jsonb_set(matter_payload,'{parties,0,clientId}',to_jsonb(client_b::text))); exception when insufficient_privilege then blocked:=true; end;
+ if not blocked then raise exception 'FAIL foreign-office client FK'; end if;
+ r:=public.sync_assignment(gen_random_uuid(),office_a,matter_a,1,jsonb_build_object('userId',lawyer_a,'isPrimary',true));
+ if r<>2 then raise exception 'FAIL assignment'; end if;
+ select count(*) into n from public.matters where id=matter_a; if n<>1 then raise exception 'FAIL admin cannot see'; end if;
+ blocked:=false;
+ begin insert into public.matter_assignments(office_id,matter_id,user_id,is_primary) values(office_a,matter_a,employee_a,false); exception when insufficient_privilege then blocked:=true; end;
+ if not blocked then raise exception 'FAIL direct assignment bypass'; end if;
+ execute 'reset role';
+ perform set_config('request.jwt.claim.sub',lawyer_a::text,true); execute 'set local role authenticated';
+ select count(*) into n from public.clients where id=client_a; if n<>1 then raise exception 'FAIL lawyer client'; end if;
+ select count(*) into n from public.matters where id=matter_a; if n<>1 then raise exception 'FAIL lawyer case'; end if;
+ select count(*) into n from public.clients where id=client_b; if n<>0 then raise exception 'FAIL lawyer cross tenant'; end if;
+ blocked:=false;
+ begin perform public.sync_assignment(gen_random_uuid(),office_a,matter_a,2,jsonb_build_object('userId',employee_a,'isPrimary',false)); exception when insufficient_privilege then blocked:=true; end;
+ if not blocked then raise exception 'FAIL lawyer can assign'; end if;
+ execute 'reset role';
+ perform set_config('request.jwt.claim.sub',admin_a::text,true); execute 'set local role authenticated';
+ r:=public.sync_assignment(gen_random_uuid(),office_a,matter_a,2,jsonb_build_object('userId',lawyer_a,'isPrimary',true,'remove',true));
+ if r<>3 then raise exception 'FAIL assignment removal revision'; end if;
+ execute 'reset role';
+ perform set_config('request.jwt.claim.sub',lawyer_a::text,true); execute 'set local role authenticated';
+ select count(*) into n from public.matters where id=matter_a; if n<>0 then raise exception 'FAIL removed lawyer still accesses case'; end if;
+ execute 'reset role';
+ perform set_config('request.jwt.claim.sub',admin_a::text,true); execute 'set local role authenticated';
+ r:=public.sync_assignment(gen_random_uuid(),office_a,matter_a,3,jsonb_build_object('userId',lawyer_a,'isPrimary',true));
+ select count(*) into n from public.matter_assignments where matter_id=matter_a;
+ if r<>4 or n<>2 then raise exception 'FAIL assignment history not retained'; end if;
+ execute 'reset role';
+ perform set_config('request.jwt.claim.sub',employee_a::text,true); execute 'set local role authenticated';
+ select count(*) into n from public.clients where id=client_a; if n<>1 then raise exception 'FAIL employee shared client'; end if;
+ select count(*) into n from public.matters where id=matter_a; if n<>1 then raise exception 'FAIL employee shared case'; end if;
+ execute 'reset role';
+ perform set_config('request.jwt.claim.sub',admin_b::text,true); execute 'set local role authenticated';
+ select count(*) into n from public.clients where id=client_a; if n<>0 then raise exception 'FAIL cross-office clients'; end if;
+ select count(*) into n from public.matters where id=matter_a; if n<>0 then raise exception 'FAIL cross-office cases'; end if;
+ select count(*) into n from public.matter_assignments where matter_id=matter_a; if n<>0 then raise exception 'FAIL cross-office assignments'; end if;
+ blocked:=false;
+ begin insert into public.clients(office_id,full_name) values(office_a,'Forged'); exception when insufficient_privilege then blocked:=true; end;
+ if not blocked then raise exception 'FAIL forged tenant insert'; end if;
+ blocked:=false;
+ begin perform public.sync_client(gen_random_uuid(),office_a,client_a,1,client_payload); exception when insufficient_privilege then blocked:=true; end;
+ if not blocked then raise exception 'FAIL cross-office RPC'; end if;
+ execute 'reset role';
+ perform set_config('request.jwt.claim.sub',reception_a::text,true); execute 'set local role authenticated';
+ select count(*) into n from public.matters where id=matter_a; if n<>0 then raise exception 'FAIL reception internal case'; end if;
+ blocked:=false;
+ begin perform public.sync_matter(gen_random_uuid(),office_a,gen_random_uuid(),0,matter_payload); exception when insufficient_privilege then blocked:=true; end;
+ if not blocked then raise exception 'FAIL reception creates case'; end if;
+ execute 'reset role';
+ update public.office_members set status='suspended' where office_id=office_a and user_id=lawyer_a;
+ perform set_config('request.jwt.claim.sub',lawyer_a::text,true); execute 'set local role authenticated';
+ select count(*) into n from public.clients where id=client_a; if n<>0 then raise exception 'FAIL suspended membership'; end if;
+ execute 'reset role';
+ update public.office_members set status='invited' where office_id=office_a and user_id=lawyer_a;
+ execute 'set local role authenticated';
+ select count(*) into n from public.matters where id=matter_a; if n<>0 then raise exception 'FAIL invited membership'; end if;
+ execute 'reset role';
+ perform set_config('request.jwt.claim.sub',owner_id::text,true); execute 'set local role authenticated';
+ select count(*) into n from public.matters where id=matter_a; if n<>0 then raise exception 'FAIL platform legal access'; end if;
+ execute 'reset role';
+end $test$;
+select 'PASS: shared clients/matters, assignment, idempotency, conflicts, roles and tenant isolation' as result;
+rollback;

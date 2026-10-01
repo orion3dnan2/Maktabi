@@ -1,6 +1,7 @@
 import { createClient, FunctionsHttpError } from '@supabase/supabase-js';
 import { deleteItemAsync, getItemAsync, setItemAsync } from 'expo-secure-store';
 import { Platform } from 'react-native';
+import type { Database } from './database.types';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -41,7 +42,7 @@ const secureChunkedStorage = {
   },
 };
 
-export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
+export const supabase = createClient<Database>(supabaseUrl, supabasePublishableKey, {
   auth: {
     // On web supabase-js uses localStorage by default; SecureStore is native only.
     storage: Platform.OS === 'web' ? undefined : secureChunkedStorage,

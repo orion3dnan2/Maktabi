@@ -7,10 +7,12 @@ import { colors, elevation, EmptyState, ErrorState, LoadingState, typography } f
 import { ActionButton, arabicCount, Avatar, Chevron, HeroHeader, LuxeCard, Pill, row, rtl, SectionTitle, Sheet, Timeline, type TimelineItem, type Tone } from '@/components/luxe';
 import { clientRepository, matterRepository, OFFICE_ID, profileRepository } from '@/data/repositories';
 import { useResource } from '../shared/hooks';
+import { isUnlocked } from '@/data/vault';
+import type { ClientProfileData } from '@/data/mockRepositories';
 
 const fetchClients = async () => {
   const [clients, matters] = await Promise.all([clientRepository.listByOffice(OFFICE_ID), matterRepository.listByOffice(OFFICE_ID)]);
-  const profiles = new Map(await Promise.all(clients.map(async (c) => [c.id, await profileRepository.getByClient(c.id)] as const)));
+  const profiles = isUnlocked() ? new Map(await Promise.all(clients.map(async (c) => [c.id, await profileRepository.getByClient(c.id)] as const))) : new Map<string, ClientProfileData>();
   const counts = new Map<string, number>();
   for (const m of matters) if (m.status === 'ACTIVE') for (const id of new Set(m.parties.map((p) => p.clientId))) if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
   return { clients, matters, profiles, counts };
@@ -33,7 +35,7 @@ export default function ClientListScreen() {
     const k = kindPill(m.type); const d = new Date(m.nextEventAt!);
     return { id: m.id, time: clock.format(d), date: weekday.format(d), title: m.parties.find((p) => p.isPrimary)?.displayName ?? m.title, subtitle: `${k.pill} — ${m.title} (${matterTypes[m.type]})`, icon: k.icon as never, mc: k.mc, pill: k.pill, tone: k.tone, onPress: () => router.push({ pathname: '/matters/[id]', params: { id: m.id } }) };
   }), [data, router]);
-  const preview = (title: string, body: string) => Alert.alert(title, `${body}\nلا يتم الاتصال أو إرسال رسائل للأرقام التجريبية.`);
+  const preview = (title: string, body: string) => Alert.alert(title, `${body}\nالاتصال والمشاركة المباشرة لم يُفعّلا في هذه الشاشة بعد.`);
   const featuredProfile = featured ? data?.profiles.get(featured.id) : undefined;
   return <View style={styles.flex}>
     <ScrollView keyboardShouldPersistTaps="handled">
@@ -47,7 +49,7 @@ export default function ClientListScreen() {
             <View style={styles.flex1}>
               <Pill label="العميل المميز" tone="gold" icon="star"/>
               <Text numberOfLines={2} style={styles.featuredName}>{featured.displayName}</Text>
-              <Text style={styles.muted}>{(data!.counts.get(featured.id) ?? 0) ? 'عميل نشط' : 'عميل جديد'} · {clientKinds[featured.kind]}</Text>
+              <Text style={styles.muted}>عميل مسجل · {clientKinds[featured.kind]}</Text>
               <View style={[styles.phoneRow, { flexDirection: row }]}><Ionicons name="call" size={16} color={colors.navy900}/><Text style={styles.phone}>{LRM + featured.phone}</Text></View>
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel="فتح ملف العميل" onPress={() => open(featured.id)} style={[styles.miniCard, { flexDirection: row }]}>
@@ -56,7 +58,7 @@ export default function ClientListScreen() {
             </Pressable>
           </View>
           <View style={[styles.actions, { flexDirection: row }]}>
-            <ActionButton variant="navy" icon="call" label="اتصال" onPress={() => preview('معاينة الاتصال', `رقم تجريبي: ${featured.phone}`)}/>
+            <ActionButton variant="navy" icon="call" label="اتصال" onPress={() => preview('معاينة الاتصال', `الهاتف: ${featured.phone}`)}/>
             <ActionButton variant="green" icon="logo-whatsapp" label="واتساب" onPress={() => preview('معاينة واتساب', `الرقم: ${featured.whatsapp || featured.phone}`)}/>
             <ActionButton variant="cream" grow={1.3} icon="document-text-outline" label="إضافة ملاحظة" onPress={() => router.push({ pathname: '/clients/[id]/edit', params: { id: featured.id } })}/>
           </View>
@@ -78,12 +80,12 @@ export default function ClientListScreen() {
           {filtered.map((c, i) => { const n = data?.counts.get(c.id) ?? 0;
             return <Pressable key={c.id} accessibilityRole="button" accessibilityLabel={`فتح ملف العميل ${c.displayName}`} onPress={() => open(c.id)} style={({ pressed }) => [styles.clientRow, { flexDirection: row }, i > 0 && styles.divider, pressed && { opacity: 0.7 }]}>
               <Avatar size={50}/>
-              <View style={styles.flex1}><Text numberOfLines={1} style={styles.clientName}>{c.displayName}</Text><Text style={styles.muted}>{n ? 'عميل نشط' : 'عميل جديد'}</Text></View>
+              <View style={styles.flex1}><Text numberOfLines={1} style={styles.clientName}>{c.displayName}</Text><Text style={styles.muted}>عميل مسجل</Text></View>
               <View style={[styles.miniRow, { flexDirection: row }]}><Ionicons name="calendar-outline" size={22} color={colors.gold600}/><Text style={styles.count}>{arabicCount(n, 'قضية', 'قضايا')}</Text></View>
               <Chevron color={colors.navy900}/>
             </Pressable>; })}
         </LuxeCard>
-        <Text style={styles.disclaimer}>تُحفظ البيانات محلياً على هذا الجهاز.</Text>
+        <Text style={styles.disclaimer}>العملاء والقضايا محفوظة محلياً وتُزامن مع المكتب عند توفر الاتصال.</Text>
       </Sheet>
     </ScrollView>
   </View>;

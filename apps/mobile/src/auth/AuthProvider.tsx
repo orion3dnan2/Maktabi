@@ -1,9 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { resetRepositories } from '@/data/repositories';
-import { discardUserVault, isUnlocked, lockVault, openUserVault, selectVaultUser, VaultPasswordMismatch } from '@/data/vault';
+import { discardUserVault, lockVault, openUserVault, selectVaultUser, VaultPasswordMismatch } from '@/data/vault';
+import { clearSharedSession, initializeSharedSession } from '@/data/sharedRepositories';
+import { cloudError } from '@/data/sync/cloud';
+import { SyncError } from '@/data/sync/types';
+import { cachedAccess, rememberAccess, forgetAccess } from './offlineAccess';
 import { accessProblem, isStaff, type Access } from './access';
 import { normalizePhone, phoneLoginEmail } from './phone';
+import { AuthRetryableFetchError } from '@supabase/supabase-js';
 
 type Status = 'loading' | 'signedOut' | 'ready';
 interface AuthState {
@@ -22,8 +27,15 @@ export const useAuth = () => { const value = useContext(AuthContext); if (!value
 
 async function loadAccess(): Promise<Access | undefined> {
   const { data, error } = await supabase.rpc('my_access');
-  if (error) throw new Error('تعذر الاتصال بالخادم. تحقق من الإنترنت ثم حاول مجدداً.');
-  return (data ?? undefined) as Access | undefined;
+  if (error) throw cloudError(error);
+  const access = (data ?? undefined) as Access | undefined;
+  if (access?.office && access.role !== 'client') {
+    const { data: member, error: memberError } = await supabase.from('office_members').select('role,status').eq('office_id',access.office.id).eq('user_id',access.user_id).maybeSingle();
+    if (memberError) throw cloudError(memberError);
+    if (!member || member.status !== 'active') throw new SyncError('forbidden','عضوية المكتب غير نشطة');
+    access.role = member.role;
+  }
+  return access;
 }
 
 function authMessage(message: string): string {
@@ -37,23 +49,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<Status>('loading');
   const [access, setAccess] = useState<Access>();
 
-  const clearLocal = useCallback(() => { lockVault(); selectVaultUser(null); resetRepositories(); setAccess(undefined); setStatus('signedOut'); }, []);
+  const clearLocal = useCallback(() => { clearSharedSession(); lockVault(); selectVaultUser(null); resetRepositories(); setAccess(undefined); setStatus('signedOut'); }, []);
 
   // Cold start: a saved session is enough for the portal and the platform console.
-  // Staff must type their password again because it unlocks this device's workspace.
+  // Shared operational records use device keys; legacy vaults remain recoverable separately.
   useEffect(() => {
     let active = true;
     (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) { if (active) setStatus('signedOut'); return; }
       try {
-        const current = await loadAccess();
+        let current: Access | undefined;
+        const { data, error: sessionError } = await supabase.auth.getSession();
+        if(sessionError instanceof AuthRetryableFetchError) current=await cachedAccess();
+        else {
+          if(sessionError) throw sessionError;
+          if (!data.session) { if (active) setStatus('signedOut'); return; }
+          try { current = await loadAccess(); if (current) await rememberAccess(current); }
+          catch (e) { if (e instanceof SyncError && e.reason === 'offline') current = await cachedAccess(data.session.user.id); else { await forgetAccess(data.session.user.id); throw e; } }
+        }
         if (!active) return;
-        if (accessProblem(current) || (isStaff(current) && !isUnlocked())) { await supabase.auth.signOut(); if (active) clearLocal(); return; }
+        if (accessProblem(current)) { await forgetAccess(); await supabase.auth.signOut(); if (active) clearLocal(); return; }
+        await initializeSharedSession(current!);
+        if (!active) { clearSharedSession(); return; }
         setAccess(current); setStatus('ready');
       } catch { if (active) setStatus('signedOut'); }
     })();
-    const { data: listener } = supabase.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT' && active) clearLocal(); });
+    const { data: listener } = supabase.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT' && active) { void forgetAccess(); clearLocal(); } });
     return () => { active = false; listener.subscription.unsubscribe(); };
   }, [clearLocal]);
 
@@ -69,9 +89,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (problem) throw new Error(problem);
       if (isStaff(current)) {
         if (discardLocal) { selectVaultUser(current!.user_id); await discardUserVault(); }
-        await openUserVault(current!.user_id, phone, password);
+        try { await openUserVault(current!.user_id, phone, password); }
+        catch (e) { if (!(e instanceof VaultPasswordMismatch)) throw e; /* Preserve old ciphertext; shared data is independent of this password. */ }
         resetRepositories();
       }
+      await initializeSharedSession(current!);
+      await rememberAccess(current!);
       void supabase.rpc('log_login_success');
       setAccess(current); setStatus('ready');
     } catch (e) {
@@ -86,8 +109,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     status, access,
     signIn: (phone, password) => doSignIn(phone, password, false),
     signInDiscardingLocalData: (phone, password) => doSignIn(phone, password, true),
-    signOut: async () => { await supabase.auth.signOut(); clearLocal(); },
-    refresh: async () => { const current = await loadAccess(); if (current) setAccess(current); },
+    signOut: async () => { if (access) await forgetAccess(access.user_id); await supabase.auth.signOut(); clearLocal(); },
+    refresh: async () => { const current = await loadAccess(); if (current) { await initializeSharedSession(current); await rememberAccess(current); setAccess(current); } },
   }), [status, access, doSignIn, clearLocal]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

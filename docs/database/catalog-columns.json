@@ -1,0 +1,1847 @@
+{
+  "capturedOn": "2026-09-30",
+  "projectRef": "ngckrfvsjggpnaddivyq",
+  "note": "Catalog metadata only, no business rows or credentials. Does not replace historical migrations.",
+  "columns": [
+    {
+      "table_schema": "private",
+      "table_name": "bootstrap_codes",
+      "column_name": "code_hash",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "private",
+      "table_name": "bootstrap_codes",
+      "column_name": "expires_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "private",
+      "table_name": "office_counters",
+      "column_name": "office_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "private",
+      "table_name": "office_counters",
+      "column_name": "scope",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "private",
+      "table_name": "office_counters",
+      "column_name": "year",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "private",
+      "table_name": "office_counters",
+      "column_name": "last_value",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "table_schema": "private",
+      "table_name": "platform_admins",
+      "column_name": "user_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "private",
+      "table_name": "platform_admins",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "appointments",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "appointments",
+      "column_name": "office_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "private.current_office_id()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "appointments",
+      "column_name": "client_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "appointments",
+      "column_name": "matter_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "appointments",
+      "column_name": "assigned_to",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "appointments",
+      "column_name": "title",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "appointments",
+      "column_name": "description",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "appointments",
+      "column_name": "appointment_type",
+      "udt_name": "appointment_type",
+      "is_nullable": "NO",
+      "column_default": "'client_meeting'::appointment_type"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "appointments",
+      "column_name": "starts_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "appointments",
+      "column_name": "ends_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "appointments",
+      "column_name": "location",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "appointments",
+      "column_name": "status",
+      "udt_name": "appointment_status",
+      "is_nullable": "NO",
+      "column_default": "'scheduled'::appointment_status"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "appointments",
+      "column_name": "reminder_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "appointments",
+      "column_name": "created_by",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": "auth.uid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "appointments",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "appointments",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "appointments",
+      "column_name": "stage_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "appointments",
+      "column_name": "outcome",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "column_name": "id",
+      "udt_name": "int8",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "column_name": "office_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "column_name": "user_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "column_name": "action",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "column_name": "entity_type",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "column_name": "entity_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "column_name": "metadata",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "audit_logs",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "office_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "private.current_office_id()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "client_type",
+      "udt_name": "client_type",
+      "is_nullable": "NO",
+      "column_default": "'individual'::client_type"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "full_name",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "id_type",
+      "udt_name": "identity_document_type",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "civil_id",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "id_country",
+      "udt_name": "bpchar",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "nationality",
+      "udt_name": "bpchar",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "phone",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "secondary_phone",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "email",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "address",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "contact_person",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "registration_number",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "notes",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "status",
+      "udt_name": "client_status",
+      "is_nullable": "NO",
+      "column_default": "'active'::client_status"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "metadata",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "created_by",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": "auth.uid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "whatsapp",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "clients",
+      "column_name": "revision",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "1"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "documents",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "documents",
+      "column_name": "office_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "private.current_office_id()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "documents",
+      "column_name": "client_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "documents",
+      "column_name": "matter_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "documents",
+      "column_name": "uploaded_by",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": "auth.uid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "documents",
+      "column_name": "file_name",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "documents",
+      "column_name": "storage_path",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "documents",
+      "column_name": "mime_type",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "documents",
+      "column_name": "file_size",
+      "udt_name": "int8",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "documents",
+      "column_name": "document_type",
+      "udt_name": "document_type",
+      "is_nullable": "NO",
+      "column_default": "'other'::document_type"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "documents",
+      "column_name": "description",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "documents",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "documents",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_assignments",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_assignments",
+      "column_name": "office_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_assignments",
+      "column_name": "matter_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_assignments",
+      "column_name": "user_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_assignments",
+      "column_name": "is_primary",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_assignments",
+      "column_name": "assigned_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_assignments",
+      "column_name": "assigned_by",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": "auth.uid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_assignments",
+      "column_name": "ended_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_deadlines",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_deadlines",
+      "column_name": "office_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "private.current_office_id()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_deadlines",
+      "column_name": "matter_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_deadlines",
+      "column_name": "title",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_deadlines",
+      "column_name": "due_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_deadlines",
+      "column_name": "legal_basis",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_deadlines",
+      "column_name": "completed_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_deadlines",
+      "column_name": "completed_by",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_deadlines",
+      "column_name": "created_by",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": "auth.uid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_deadlines",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_deadlines",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_events",
+      "column_name": "id",
+      "udt_name": "int8",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_events",
+      "column_name": "office_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_events",
+      "column_name": "matter_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_events",
+      "column_name": "kind",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_events",
+      "column_name": "subject",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_events",
+      "column_name": "actor_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_events",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_notes",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_notes",
+      "column_name": "office_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "private.current_office_id()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_notes",
+      "column_name": "matter_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_notes",
+      "column_name": "body",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_notes",
+      "column_name": "created_by",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": "auth.uid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_notes",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_parties",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_parties",
+      "column_name": "office_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "private.current_office_id()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_parties",
+      "column_name": "matter_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_parties",
+      "column_name": "client_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_parties",
+      "column_name": "display_name",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_parties",
+      "column_name": "party_role",
+      "udt_name": "party_role",
+      "is_nullable": "NO",
+      "column_default": "'other'::party_role"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_parties",
+      "column_name": "notes",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_parties",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_parties",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_parties",
+      "column_name": "is_primary",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_progress",
+      "column_name": "matter_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_progress",
+      "column_name": "next_event_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_progress",
+      "column_name": "current_stage",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "office_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "private.current_office_id()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "matter_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "procedure_name",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "position",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "name",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "authority",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "reference",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "''::text"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "stage_date",
+      "udt_name": "date",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "status",
+      "udt_name": "stage_status",
+      "is_nullable": "NO",
+      "column_default": "'pending'::stage_status"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "details",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "requirements",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'[]'::jsonb"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "document_ids",
+      "udt_name": "_uuid",
+      "is_nullable": "NO",
+      "column_default": "'{}'::uuid[]"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "notes",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "''::text"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "skip_reason",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "started_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "finished_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "created_by",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": "auth.uid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matter_stages",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matters",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matters",
+      "column_name": "office_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "private.current_office_id()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matters",
+      "column_name": "client_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matters",
+      "column_name": "assigned_lawyer_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matters",
+      "column_name": "matter_number",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "private.next_matter_number()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matters",
+      "column_name": "title",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matters",
+      "column_name": "description",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matters",
+      "column_name": "matter_type",
+      "udt_name": "matter_type",
+      "is_nullable": "NO",
+      "column_default": "'other'::matter_type"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matters",
+      "column_name": "court_name",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matters",
+      "column_name": "case_number",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matters",
+      "column_name": "status",
+      "udt_name": "matter_status",
+      "is_nullable": "NO",
+      "column_default": "'open'::matter_status"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matters",
+      "column_name": "priority",
+      "udt_name": "priority_level",
+      "is_nullable": "NO",
+      "column_default": "'normal'::priority_level"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matters",
+      "column_name": "opened_at",
+      "udt_name": "date",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_DATE"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matters",
+      "column_name": "closed_at",
+      "udt_name": "date",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matters",
+      "column_name": "details",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matters",
+      "column_name": "created_by",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": "auth.uid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matters",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matters",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "matters",
+      "column_name": "revision",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": "1"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "office_members",
+      "column_name": "office_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "office_members",
+      "column_name": "user_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "office_members",
+      "column_name": "role",
+      "udt_name": "app_role",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "office_members",
+      "column_name": "status",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'active'::text"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "office_members",
+      "column_name": "joined_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "office_members",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "office_members",
+      "column_name": "created_by",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "offices",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "offices",
+      "column_name": "name",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "offices",
+      "column_name": "name_ar",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "offices",
+      "column_name": "phone",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "offices",
+      "column_name": "email",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "offices",
+      "column_name": "address",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "offices",
+      "column_name": "country",
+      "udt_name": "bpchar",
+      "is_nullable": "NO",
+      "column_default": "'SD'::bpchar"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "offices",
+      "column_name": "default_currency",
+      "udt_name": "bpchar",
+      "is_nullable": "NO",
+      "column_default": "'SDG'::bpchar"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "offices",
+      "column_name": "timezone",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "'Africa/Khartoum'::text"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "offices",
+      "column_name": "status",
+      "udt_name": "office_status",
+      "is_nullable": "NO",
+      "column_default": "'active'::office_status"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "offices",
+      "column_name": "settings",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "offices",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "offices",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "column_name": "office_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "private.current_office_id()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "column_name": "client_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "column_name": "matter_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "column_name": "amount",
+      "udt_name": "numeric",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "column_name": "currency",
+      "udt_name": "bpchar",
+      "is_nullable": "NO",
+      "column_default": "'SDG'::bpchar"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "column_name": "payment_type",
+      "udt_name": "payment_type",
+      "is_nullable": "NO",
+      "column_default": "'legal_fee'::payment_type"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "column_name": "payment_method",
+      "udt_name": "payment_method",
+      "is_nullable": "NO",
+      "column_default": "'cash'::payment_method"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "column_name": "payment_status",
+      "udt_name": "payment_status",
+      "is_nullable": "NO",
+      "column_default": "'completed'::payment_status"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "column_name": "reference_number",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "column_name": "description",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "column_name": "paid_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "column_name": "created_by",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": "auth.uid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "payments",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "procedure_templates",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "procedure_templates",
+      "column_name": "office_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "private.current_office_id()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "procedure_templates",
+      "column_name": "name",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "procedure_templates",
+      "column_name": "matter_types",
+      "udt_name": "_matter_type",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "procedure_templates",
+      "column_name": "stages",
+      "udt_name": "jsonb",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "procedure_templates",
+      "column_name": "created_by",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": "auth.uid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "procedure_templates",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "procedure_templates",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "profiles",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "profiles",
+      "column_name": "office_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "profiles",
+      "column_name": "role",
+      "udt_name": "app_role",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "profiles",
+      "column_name": "full_name",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": "''::text"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "profiles",
+      "column_name": "display_name",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "profiles",
+      "column_name": "email",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "profiles",
+      "column_name": "phone",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "profiles",
+      "column_name": "avatar_url",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "profiles",
+      "column_name": "is_active",
+      "udt_name": "bool",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "profiles",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "profiles",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "profiles",
+      "column_name": "client_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "sync_receipts",
+      "column_name": "office_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "sync_receipts",
+      "column_name": "user_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "auth.uid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "sync_receipts",
+      "column_name": "operation_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "sync_receipts",
+      "column_name": "entity_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "sync_receipts",
+      "column_name": "kind",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "sync_receipts",
+      "column_name": "request_hash",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "sync_receipts",
+      "column_name": "revision",
+      "udt_name": "int4",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "sync_receipts",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tasks",
+      "column_name": "id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tasks",
+      "column_name": "office_id",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "private.current_office_id()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tasks",
+      "column_name": "matter_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tasks",
+      "column_name": "client_id",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tasks",
+      "column_name": "assigned_to",
+      "udt_name": "uuid",
+      "is_nullable": "NO",
+      "column_default": "auth.uid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tasks",
+      "column_name": "title",
+      "udt_name": "text",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tasks",
+      "column_name": "description",
+      "udt_name": "text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tasks",
+      "column_name": "priority",
+      "udt_name": "priority_level",
+      "is_nullable": "NO",
+      "column_default": "'normal'::priority_level"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tasks",
+      "column_name": "status",
+      "udt_name": "task_status",
+      "is_nullable": "NO",
+      "column_default": "'pending'::task_status"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tasks",
+      "column_name": "due_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tasks",
+      "column_name": "completed_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tasks",
+      "column_name": "created_by",
+      "udt_name": "uuid",
+      "is_nullable": "YES",
+      "column_default": "auth.uid()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tasks",
+      "column_name": "created_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "tasks",
+      "column_name": "updated_at",
+      "udt_name": "timestamptz",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    }
+  ]
+}

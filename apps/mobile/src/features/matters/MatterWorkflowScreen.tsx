@@ -8,6 +8,7 @@ import { money, useResource } from '../shared/hooks';
 import { downloadAttachment, pickAttachment } from './workflowFiles';
 import { ProcedurePanel } from './ProcedurePanel';
 import { FinancePanel } from './FinancePanel';
+import { isUnlocked } from '@/data/vault';
 
 const sections = [ { value: 'procedure', label: 'مسار الإجراءات' }, { value: 'appointments', label: 'المواعيد' }, { value: 'documents', label: 'المستندات' }, { value: 'finance', label: 'الأتعاب والإيصالات' }, { value: 'notes', label: 'المتابعة والإغلاق' } ];
 const localDate = (iso: string) => new Date(iso).toLocaleString('ar', { numberingSystem: 'latn' });
@@ -23,6 +24,7 @@ export default function MatterWorkflowScreen() {
     if (lock.current) return; lock.current = true; setBusy(true); setFailure(''); setMessage('');
     try { await action(); setMessage(success); reload(); } catch (e) { setFailure(e instanceof Error ? e.message : 'تعذر حفظ العملية؛ حاول مرة أخرى'); } finally { lock.current = false; setBusy(false); }
   };
+  if (!isUnlocked()) return <FormPage title="سير القضية"><BodyText>الإجراءات والمرفقات والمالية لم تُنقل بعد إلى المزامنة. افتح بيانات هذا الجهاز لمتابعتها.</BodyText><Button label="فتح العمليات المحلية" onPress={() => router.push('/office/legacy')}/><Button label="تفاصيل القضية المشتركة" variant="secondary" onPress={() => router.replace({ pathname: '/matters/[id]', params: { id } })}/></FormPage>;
   if (error) return <FormPage title="سير القضية"><ErrorState message={error} onRetry={reload}/></FormPage>;
   if (!data) return <LoadingState/>;
   const { matter: m, workflow: w } = data; const paid = paidTotal(w); const closed = m.status === 'CLOSED' || m.status === 'ARCHIVED';

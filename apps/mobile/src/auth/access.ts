@@ -1,5 +1,6 @@
 // What a signed-in user may open. Pure functions so routing rules are unit-tested;
 // the server enforces the same rules with RLS and the manage-users function.
+import { can } from './permissions';
 
 export type OfficeRole = 'admin' | 'lawyer' | 'employee' | 'reception' | 'client';
 export interface Access {
@@ -43,6 +44,9 @@ export function canOpen(a: Access, segments: string[]): boolean {
   if (first === 'portal') return a.role === 'client';
   if (first === '(auth)') return false;
   if (first === 'office' && second === 'team') return a.role === 'admin';
+  if (first === 'office' && second === 'import') return can(a, 'manage_team');
+  if (first === 'office' && ['settings', 'procedures'].includes(second ?? '')) return can(a, second === 'settings' ? 'manage_office_settings' : 'manage_templates');
+  if (first === 'matters' || (first === '(tabs)' && second === 'matters')) return can(a, 'view_cases');
   // Office workspace: (tabs), clients, matters, office/*
   return isStaff(a);
 }

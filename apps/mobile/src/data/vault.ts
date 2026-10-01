@@ -35,7 +35,8 @@ export async function createVault(phoneInput: string, password: string) {
     if (await hasVault()) throw new Error('تم إعداد المكتب بالفعل؛ سجل الدخول');
     const phone = normalizePhone(phoneInput); if (!/^\+?\d{7,15}$/.test(phone)) throw new Error('أدخل رقم هاتف صحيحاً'); checkPassword(password);
     const salt = await getRandomBytesAsync(16); const key = await getRandomBytesAsync(32); const derived = await passwordKey(password, salt, KDF_ITERATIONS);
-    const legacy = await AsyncStorage.getItem(STORAGE_KEY);
+    // An unscoped pre-account dataset must never be copied into a different signed-in user's vault.
+    const legacy = VAULT_KEY === LEGACY_VAULT_KEY ? await AsyncStorage.getItem(STORAGE_KEY) : null;
     // Commit the encrypted copy before removing the legacy key. A failed write leaves the original intact.
     const initial = legacy ?? JSON.stringify({ version: 1, clients: [], matters: [], profiles: [], workflows: [], office: defaultOffice() });
     const vault: Vault = { version: 1, phone, salt: bytesToHex(salt), kdf: { iterations: KDF_ITERATIONS }, wrappedKey: encryptText(bytesToHex(key), derived, await getRandomBytesAsync(12)), data: encryptText(initial, key, await getRandomBytesAsync(12)) };

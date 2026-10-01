@@ -1,6 +1,7 @@
 import { createElement, useEffect, useState } from "react";
 import { useNavigation, useRouter } from "expo-router";
 import { DiscardChangesDialog } from "@maktabi/ui";
+import { sharedEngine } from '@/data/sharedRepositories';
 import {
   useIsFocused,
   usePreventRemove,
@@ -14,15 +15,23 @@ export function useResource<T>(fetcher: () => Promise<T>) {
   const isFocused = useIsFocused();
   useEffect(() => {
     if (!isFocused) return;
+    try { return sharedEngine().subscribe(() => setRevision(r => r + 1)); }
+    catch { return; } // Authentication/platform screens have no office sync engine.
+  }, [isFocused]);
+  useEffect(() => {
+    if (!isFocused) return;
     let active = true;
-    setLoading(true);
-    setError("");
-    fetcher()
+    Promise.resolve().then(() => {
+      if (!active) return undefined;
+      setLoading(true);
+      setError("");
+      return fetcher();
+    })
       .then((result) => {
-        if (active) setData(result);
+        if (active && result !== undefined) setData(result);
       })
-      .catch(() => {
-        if (active) setError("تعذر قراءة البيانات. حاول مرة أخرى.");
+      .catch((e: unknown) => {
+        if (active) setError(e instanceof Error ? e.message : "تعذر قراءة البيانات. حاول مرة أخرى.");
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -55,5 +64,5 @@ export function useUnsavedChanges(dirty: boolean) {
 export const money = (minor: number) =>
   `${new Intl.NumberFormat("ar-SD").format(minor / 100)} ج.س`;
 export const demoNotice =
-  "نسخة محلية • تُحفظ البيانات على هذا الجهاز دون مزامنة مع خادم.";
+  "العملاء والقضايا تُحفظ محلياً وتُزامن مع المكتب؛ بقية العمليات المحلية لم تُنقل بعد.";
 

@@ -20,7 +20,7 @@ export default function PlatformScreen() {
   const offices = useResource(useCallback(async () => {
     const { data, error } = await supabase.rpc('platform_list_offices');
     if (error) throw error;
-    return (data ?? []) as OfficeRow[];
+    return (data ?? []) as unknown as OfficeRow[];
   }, []));
   const [form, setForm] = useState(empty); const [created, setCreated] = useState('');
   const op = useOperation(offices.reload);

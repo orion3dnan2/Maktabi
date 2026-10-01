@@ -44,6 +44,7 @@ const roles = {
   CLIENT: "عميل إضافي",
   OPPONENT: "طرف مقابل",
   WITNESS: "شاهد",
+  EXPERT: "خبير",
   OTHER: "طرف آخر",
 };
 export default function MatterFormScreen() {
@@ -76,7 +77,6 @@ export default function MatterFormScreen() {
   const { cancel, confirmation } = useUnsavedChanges(
     !saved && (dirty || !!partyName.trim()),
   );
-  useEffect(() => {
     if (resource.data && !initialized) {
       const c = resource.data.find((c) => c.id === clientId);
       if (c)
@@ -95,7 +95,6 @@ export default function MatterFormScreen() {
         }));
       setInitialized(true);
     }
-  }, [resource.data, clientId, initialized]);
   useEffect(() => {
     if (saved) router.replace({ pathname: '/matters/[id]/workflow', params: { id: matter.id } });
   }, [saved, router, matter.id]);

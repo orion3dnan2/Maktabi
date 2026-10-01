@@ -21,7 +21,7 @@ export default function PortalScreen() {
   const portal = useResource(useCallback(async () => {
     const { data, error } = await supabase.rpc('portal_overview');
     if (error) throw error;
-    return data as PortalData;
+    return data as unknown as PortalData;
   }, []));
   const d = portal.data;
   return <View style={styles.page}><ScrollView refreshControl={<RefreshControl refreshing={portal.loading && !!d} onRefresh={portal.reload}/>}>

@@ -8,11 +8,13 @@ import { matterTypes } from '@maktabi/domain';
 import { Button, colors, ErrorState, gradients, layout, LoadingState, typography } from '@maktabi/ui';
 import { Avatar, Chevron, HeroBackdrop, IconBubble, LuxeCard, Pill, RoundIconButton, row, rtl, SectionTitle, Timeline, type IonName, type McName, type TimelineItem } from '@/components/luxe';
 import { matterRepository, workflowRepository } from '@/data/repositories';
-import { paidTotal } from '@/data/workflow';
-import { dashboardRepository } from '@/data/mockDashboardRepository';
+import { paidTotal, emptyWorkflow } from '@/data/workflow';
+import { isUnlocked } from '@/data/vault';
+import { assignmentRepository } from '@/data/sharedRepositories';
 import { money, useResource } from '../shared/hooks';
 import { matterBadge } from './MatterListScreen';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { AssignmentPanel } from './AssignmentPanel';
 
 const day = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' });
 const clock = new Intl.DateTimeFormat('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true, numberingSystem: 'latn' });
@@ -38,19 +40,19 @@ export default function MatterDetailScreen() {
     const matter = await matterRepository.getById(id);
     if (!matter) throw new Error('القضية غير موجودة');
     const clientId = matter.parties.find((p) => p.isPrimary)?.clientId;
-    const [workflow, snapshot] = await Promise.all([workflowRepository.getByMatter(id), dashboardRepository.getSnapshot()]);
-    return { matter, workflow, clientId, lawyer: snapshot.currentUser.fullName };
+    const [workflow, team] = await Promise.all([isUnlocked() ? workflowRepository.getByMatter(id) : emptyWorkflow(), assignmentRepository.team()]);
+    return { matter, workflow, clientId, now: Date.now(), lawyer: team.find(m => m.id === matter.assignedLawyerId)?.fullName ?? 'لم يُعيّن محامٍ مسؤول بعد' };
   }, [id]);
   const { data, error, reload } = useResource(fetcher);
   const back = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/matters'));
   if (error) return <View style={styles.page}><ErrorState message={error} onRetry={reload}/><Button label="القضايا" onPress={back}/></View>;
   if (!data) return <View style={styles.page}><LoadingState/></View>;
-  const { matter: m, workflow, clientId, lawyer } = data;
+  const { matter: m, workflow, clientId, lawyer, now } = data;
   const badge = matterBadge(m);
   const client = m.parties.find((p) => p.isPrimary);
   const opponent = m.parties.find((p) => p.role === 'OPPONENT');
   const paid = paidTotal(workflow); const agreed = workflow.agreedFees; const pct = agreed ? Math.max(0, Math.min(100, Math.round((paid / agreed) * 100))) : 0;
-  const daysLeft = m.nextEventAt ? Math.max(0, Math.ceil((Date.parse(m.nextEventAt) - Date.now()) / 86400000)) : undefined;
+  const daysLeft = m.nextEventAt ? Math.max(0, Math.ceil((Date.parse(m.nextEventAt) - now) / 86400000)) : undefined;
   const docs = workflow.documents;
   const timeline: TimelineItem[] = [
     { id: 'open', time: slash(m.openedAt), title: 'فتح ملف القضية', subtitle: `تم تسجيل القضية لدى ${m.authority || 'المكتب'}`, icon: 'document-text-outline', pill: 'مكتمل', tone: 'gold' },
@@ -118,7 +120,8 @@ export default function MatterDetailScreen() {
           <SectionTitle icon="time-outline" title="تسلسل القضية"/>
           <Timeline items={timeline}/>
         </LuxeCard>
-        <Text style={styles.disclaimer}>بيانات خيالية لأغراض العرض فقط.</Text>
+        <AssignmentPanel matterId={m.id}/>
+        <Text style={styles.disclaimer}>القضية والعميل مشتركان عبر المزامنة؛ الإجراءات والمالية والمرفقات ما زالت محلية في هذه المرحلة.</Text>
       </View>
     </ScrollView>
     <BottomNavigation selected="matters" onNavigate={(name) => router.replace(name === 'index' ? '/(tabs)' : `/(tabs)/${name}`)}/>

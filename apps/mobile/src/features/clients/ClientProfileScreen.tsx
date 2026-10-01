@@ -22,6 +22,9 @@ import {
   profileRepository,
 } from "@/data/repositories";
 import { demoNotice, money, useResource } from "../shared/hooks";
+import { isUnlocked } from '@/data/vault';
+import { useAuth } from '@/auth/AuthProvider';
+import { can } from '@/auth/permissions';
 const sections = {
   overview: "نظرة عامة",
   matters: "الملفات",
@@ -33,12 +36,13 @@ const sections = {
 export default function ClientProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { access } = useAuth();
   const [section, setSection] = useState("overview");
   const fetchProfile = useCallback(async () => {
     const [client, matters, profile] = await Promise.all([
       clientRepository.getById(id),
       matterRepository.listByClient(id),
-      profileRepository.getByClient(id),
+      isUnlocked() ? profileRepository.getByClient(id) : Promise.resolve(null),
     ]);
     if (!client) throw new Error("العميل غير موجود");
     return { client, matters, profile };
@@ -56,6 +60,13 @@ export default function ClientProfileScreen() {
     );
   if (!data) return <LoadingState />;
   const { client, matters, profile } = data;
+  if (!profile) return <FormPage title="ملف العميل"><Card><SectionHeader title={client.displayName}/><BodyText>الهاتف: {client.phone}</BodyText><BodyText>العملاء والقضايا مشتركة عبر المزامنة. المالية والمرفقات السابقة تحتاج فتح بيانات هذا الجهاز حتى تُنقل.</BodyText>
+    <Button label="فتح العمليات المحلية" onPress={() => router.push('/office/legacy')}/>
+    <Button label="تعديل العميل" variant="secondary" onPress={() => router.push({ pathname: '/clients/[id]/edit', params: { id } })}/>
+    {can(access,'edit_cases') ? <Button label="قضية جديدة" onPress={() => router.push({ pathname: '/matters/new', params: { clientId: id } })}/> : null}
+    {matters.map(m => <Button key={m.id} label={`${m.reference} · ${m.title}`} variant="secondary" onPress={() => router.push({ pathname: '/matters/[id]', params: { id: m.id } })}/>)}
+    <Button label="العودة للعملاء" variant="secondary" onPress={() => router.replace('/(tabs)/clients')}/>
+  </Card></FormPage>;
   const finances = (
     <Card>
       <SectionHeader title="أتعاب المحامي" />
@@ -69,7 +80,7 @@ export default function ClientProfileScreen() {
       <SectionHeader title="المصروفات" />
       <BodyText>إجمالي المصروفات: {money(profile.expenses)}</BodyText>
       <BodyText muted>
-        الأمانات منفصلة عن الأتعاب والمصروفات. القيم التجريبية بالجنيه السوداني.
+        الأمانات منفصلة عن الأتعاب والمصروفات. القيم المحلية بالجنيه السوداني.
       </BodyText>
     </Card>
   );
@@ -142,7 +153,7 @@ export default function ClientProfileScreen() {
             onPress={() =>
               Alert.alert(
                 "معاينة واتساب",
-                `الرقم: ${client.whatsapp || client.phone}\nلا يتم إرسال رسائل أو فتح محادثات للأرقام التجريبية.`,
+                `الرقم: ${client.whatsapp || client.phone}\nإرسال الرسائل من التطبيق لم يُفعّل بعد.`,
               )
             }
           />
@@ -152,7 +163,7 @@ export default function ClientProfileScreen() {
             onPress={() =>
               Alert.alert(
                 "معاينة الاتصال",
-                `رقم تجريبي: ${client.phone}\nالاتصال الفعلي غير مفعّل في هذا النموذج.`,
+                `رقم الهاتف: ${client.phone}\nفتح الاتصال من التطبيق لم يُفعّل بعد.`,
               )
             }
           />

@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Text } from 'react-native';
 import { BodyText, Button, Card, FormPage, Input, SectionHeader, featureStyles } from '@maktabi/ui';
-import { defaultOffice } from '@/data/office';
+import { defaultOffice, type OfficeSettings } from '@/data/office';
 import { officeRepository } from '@/data/repositories';
 import { useResource } from '@/features/shared/hooks';
 import { useOperation } from '@/features/shared/useOperation';
@@ -10,8 +10,9 @@ import { pickAttachment } from '@/features/matters/workflowFiles';
 import { ServiceNotice } from '@/components/ServiceNotice';
 export default function OfficeSettingsScreen() {
   const router = useRouter(); const resource = useResource(useCallback(() => officeRepository.getSettings(), []));
-  const [settings, setSettings] = useState(defaultOffice().settings); const op = useOperation();
-  useEffect(() => { if (resource.data) setSettings(resource.data); }, [resource.data]);
+  const [draft, setDraft] = useState<OfficeSettings>(); const op = useOperation();
+  const settings = draft ?? resource.data ?? defaultOffice().settings;
+  const setSettings = (update: (current: OfficeSettings) => OfficeSettings) => setDraft(current => update(current ?? settings));
   return <FormPage title="إعدادات المكتب"><Button label="العودة للمزيد" variant="secondary" onPress={() => router.replace('/(tabs)/more')}/><Card><SectionHeader title="بيانات المكتب والإيصالات"/>
     {Object.entries({ name: 'اسم المكتب', address: 'العنوان', phone: 'هاتف المكتب', receiver: 'اسم مستلم الدفعات', receiptPrefix: 'بادئة الإيصالات (حروف لاتينية / أرقام)' }).map(([key, label]) => <Input key={key} label={label} value={settings[key as 'name']} onChangeText={(value) => setSettings((s) => ({ ...s, [key]: value }))}/>)}
     <BodyText muted>يُرقّم كل إيصال تلقائياً حسب السنة مع الاحتفاظ بأرقام الإيصالات الملغاة.</BodyText>
