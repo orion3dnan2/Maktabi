@@ -1,4 +1,4 @@
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, type ReactNode } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -8,11 +8,13 @@ import { matterTypes } from '@maktabi/domain';
 import { Button, colors, ErrorState, gradients, layout, LoadingState, typography } from '@maktabi/ui';
 import { Avatar, Chevron, HeroBackdrop, IconBubble, LuxeCard, Pill, RoundIconButton, row, rtl, SectionTitle, Timeline, type IonName, type McName, type TimelineItem } from '@/components/luxe';
 import { matterRepository, workflowRepository } from '@/data/repositories';
-import { paidTotal } from '@/data/workflow';
+import { paidTotal, emptyWorkflow } from '@/data/workflow';
+import { isUnlocked } from '@/data/vault';
+import { assignmentRepository } from '@/data/sharedRepositories';
 import { money, useResource } from '../shared/hooks';
-import { useOperation } from '../shared/useOperation';
 import { matterBadge } from './MatterListScreen';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { AssignmentPanel } from './AssignmentPanel';
 
 const day = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' });
 const clock = new Intl.DateTimeFormat('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true, numberingSystem: 'latn' });
@@ -38,22 +40,19 @@ export default function MatterDetailScreen() {
     const matter = await matterRepository.getById(id);
     if (!matter) throw new Error('القضية غير موجودة');
     const clientId = matter.parties.find((p) => p.isPrimary)?.clientId;
-    const workflow = await workflowRepository.getByMatter(id);
-    return { matter, workflow, clientId, loadedAt: Date.now() };
+    const [workflow, team] = await Promise.all([isUnlocked() ? workflowRepository.getByMatter(id) : emptyWorkflow(), assignmentRepository.team()]);
+    return { matter, workflow, clientId, now: Date.now(), lawyer: team.find(m => m.id === matter.assignedLawyerId)?.fullName ?? 'لم يُعيّن محامٍ مسؤول بعد' };
   }, [id]);
   const { data, error, reload } = useResource(fetcher);
-  const op = useOperation(reload);
-  const [archiving, setArchiving] = useState(false);
   const back = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/matters'));
   if (error) return <View style={styles.page}><ErrorState message={error} onRetry={reload}/><Button label="القضايا" onPress={back}/></View>;
   if (!data) return <View style={styles.page}><LoadingState/></View>;
-  const { matter: m, workflow, clientId, loadedAt } = data;
-  const edit = () => router.push({ pathname: '/matters/[id]/edit', params: { id } });
+  const { matter: m, workflow, clientId, lawyer, now } = data;
   const badge = matterBadge(m);
   const client = m.parties.find((p) => p.isPrimary);
   const opponent = m.parties.find((p) => p.role === 'OPPONENT');
   const paid = paidTotal(workflow); const agreed = workflow.agreedFees; const pct = agreed ? Math.max(0, Math.min(100, Math.round((paid / agreed) * 100))) : 0;
-  const daysLeft = m.nextEventAt ? Math.max(0, Math.ceil((Date.parse(m.nextEventAt) - loadedAt) / 86400000)) : undefined;
+  const daysLeft = m.nextEventAt ? Math.max(0, Math.ceil((Date.parse(m.nextEventAt) - now) / 86400000)) : undefined;
   const docs = workflow.documents;
   const timeline: TimelineItem[] = [
     { id: 'open', time: slash(m.openedAt), title: 'فتح ملف القضية', subtitle: `تم تسجيل القضية لدى ${m.authority || 'المكتب'}`, icon: 'document-text-outline', pill: 'مكتمل', tone: 'gold' },
@@ -70,7 +69,7 @@ export default function MatterDetailScreen() {
           <View style={[styles.nav, { flexDirection: row }]}>
             <RoundIconButton icon="chevron-forward" label="رجوع" bordered onPress={back}/>
             <Text style={styles.navTitle}>تفاصيل القضية</Text>
-            <RoundIconButton icon="create-outline" label="تعديل بيانات القضية" onPress={edit}/>
+            <RoundIconButton icon="ellipsis-horizontal" label="خيارات" onPress={() => Alert.alert('خيارات القضية', 'التعديل والأرشفة ستتوفر في دفعة لاحقة.')}/>
           </View>
           <View style={[styles.headline, { flexDirection: row }]}>
             <View style={styles.docTile}><LinearGradient colors={['#1C3358', '#0B1A30']} style={[StyleSheet.absoluteFill, { borderRadius: 16 }]}/><Ionicons name="document-text-outline" size={34} color={colors.gold500}/></View>
@@ -82,12 +81,6 @@ export default function MatterDetailScreen() {
       </HeroBackdrop>
       <View style={styles.sheet}>
         <Button label="إدارة مسار القضية" onPress={() => router.push({ pathname: '/matters/[id]/workflow', params: { id } })}/>
-        {m.status !== 'ARCHIVED' ? <Button label="تعديل بيانات القضية" variant="secondary" onPress={edit}/> : null}
-        {m.status === 'CLOSED' ? (archiving
-          ? <LuxeCard><Text style={styles.body}>الأرشفة تخفي القضية من القوائم النشطة وتحتفظ بكل بياناتها، ويمكن استعادتها لاحقاً.</Text><Button disabled={op.busy} label="تأكيد أرشفة القضية" onPress={() => void op.run(async () => { await matterRepository.setStatus(id, 'ARCHIVED'); setArchiving(false); }, 'تمت أرشفة القضية')}/><Button label="إلغاء" variant="secondary" onPress={() => setArchiving(false)}/></LuxeCard>
-          : <Button label="أرشفة القضية" variant="secondary" onPress={() => setArchiving(true)}/>) : null}
-        {m.status === 'ARCHIVED' ? <Button disabled={op.busy} label="استعادة القضية من الأرشيف" variant="secondary" onPress={() => void op.run(() => matterRepository.setStatus(id, 'CLOSED'), 'تمت استعادة القضية كقضية مغلقة')}/> : null}
-        {op.error || op.message ? <Text accessibilityLiveRegion="polite" style={[styles.body, op.error ? styles.error : null]}>{op.error || op.message}</Text> : null}
         <LuxeCard>
           <View style={[styles.overview, { flexDirection: row }]}>
             <View style={styles.flex1}>
@@ -104,7 +97,7 @@ export default function MatterDetailScreen() {
           <Tile icon="people" title="بيانات العميل" action="عرض الملف" onAction={openClient}><Party name={client?.displayName ?? 'غير محدد'} role="العميل الأساسي"/></Tile>
           <Tile icon="people-outline" title="الخصم"><Party name={opponent?.displayName ?? 'غير مسجل بعد'} role="الجهة المدعى عليها"/></Tile>
           <Tile icon="bank" mc title="معلومات المحكمة" action="عرض التفاصيل" onAction={() => Alert.alert('معلومات المحكمة', m.authority || 'الجهة غير مسجلة')}><View style={[styles.party, { flexDirection: row }]}><View style={styles.flex1}><Text numberOfLines={2} style={styles.partyName}>{m.authority || 'غير مسجلة'}</Text><Text style={styles.partyRole}>{matterTypes[m.type]}</Text></View><MaterialCommunityIcons name="bank" size={30} color={colors.gold600}/></View></Tile>
-          <Tile icon="person" title="المحامي المسؤول"><Party name={m.assignedLawyerName ? `أ. ${m.assignedLawyerName}` : 'غير مُسند بعد'} role="المحامي المسؤول" avatar/></Tile>
+          <Tile icon="person" title="المحامي المسؤول"><Party name={`أ. ${lawyer}`} role="محامي رئيسي" avatar/></Tile>
           <Tile icon="document-text" title="المستندات">
             <View style={[styles.docs, { flexDirection: row }]}>
               <View style={[styles.fileIcons, { flexDirection: row }]}>
@@ -127,7 +120,8 @@ export default function MatterDetailScreen() {
           <SectionTitle icon="time-outline" title="تسلسل القضية"/>
           <Timeline items={timeline}/>
         </LuxeCard>
-        <Text style={styles.disclaimer}>بيانات القضية وأطرافها من خادم المكتب. المستندات والأتعاب والمواعيد والملاحظات من هذا الجهاز فقط ولا تتم مزامنتها بعد.</Text>
+        <AssignmentPanel matterId={m.id}/>
+        <Text style={styles.disclaimer}>القضية والعميل مشتركان عبر المزامنة؛ الإجراءات والمالية والمرفقات ما زالت محلية في هذه المرحلة.</Text>
       </View>
     </ScrollView>
     <BottomNavigation selected="matters" onNavigate={(name) => router.replace(name === 'index' ? '/(tabs)' : `/(tabs)/${name}`)}/>
@@ -174,7 +168,6 @@ const styles = StyleSheet.create({
   pct: { color: colors.gold700, fontFamily: typography.bold, fontSize: 14 },
   dot: { width: 10, height: 10, borderRadius: 5 },
   disclaimer: { ...rtl, textAlign: 'center', color: colors.muted, fontFamily: typography.regular, fontSize: 11 },
-  error: { color: colors.danger },
 });
 
 

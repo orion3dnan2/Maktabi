@@ -12,7 +12,7 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "build": "expo export --platform web --output-dir dist"
+    "build": "expo export --platform web --clear --output-dir dist"
   },
   "dependencies": {
     "@expo-google-fonts/tajawal": "^0.4.1",
@@ -41,6 +41,7 @@
     "expo-secure-store": "57.0.4",
     "expo-sharing": "~57.0.22",
     "expo-splash-screen": "~57.0.9",
+    "expo-sqlite": "57.0.3",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",

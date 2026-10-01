@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BodyText, Button, EmptyState, ErrorState, Input, LoadingState, colors, typography } from '@maktabi/ui';
-import { HeroHeader, LuxeCard, Pill, row, rtl, SectionTitle, Sheet } from '@/components/luxe';
+import { HeroHeader, LuxeCard, Pill, row, rtl, SectionTitle, Sheet, type Tone } from '@/components/luxe';
 import { supabase, manageUsers } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { generatePassword } from '@/auth/password';
@@ -9,9 +9,20 @@ import { AccountCard } from '@/features/auth/AccountCard';
 import { useResource } from '@/features/shared/hooks';
 import { useOperation } from '@/features/shared/useOperation';
 import { MIN_PASSWORD_LENGTH } from '@/data/vault';
+import { formatDayMonth } from '@/lib/format';
+import type { OfficeStatus } from '@/auth/access';
 
-interface OfficeRow { id: string; name: string; name_ar: string | null; phone: string | null; status: 'active' | 'suspended' | 'closed'; created_at: string; members: number; admins: { full_name: string; phone: string | null; is_active: boolean }[] }
-const statusLabel = { active: 'نشط', suspended: 'موقوف', closed: 'مغلق' } as const;
+interface OfficeRow { id: string; name: string; name_ar: string | null; phone: string | null; status: OfficeStatus; created_at: string; members: number; admins: { full_name: string; phone: string | null; is_active: boolean }[] }
+interface RequestRow { office_id: string; office_name: string; office_phone: string | null; status: OfficeStatus; admin_name: string | null; admin_phone: string | null; note: string | null; requested_at: string; decision: 'approved' | 'rejected' | null; decided_at: string | null }
+const statusLabel: Record<OfficeStatus, string> = { active: 'نشط', suspended: 'موقوف', closed: 'مغلق', pending: 'بانتظار الموافقة', rejected: 'مرفوض' };
+const requestTone: Record<OfficeStatus, Tone> = { active: 'green', suspended: 'red', closed: 'grey', pending: 'gold', rejected: 'red' };
+const ltr = (text: string) => `\u2066${text}\u2069`;
+
+/** Asks before a decision that cannot be undone (Alert has no buttons on web). */
+function askFirst(title: string, message: string, action: string, onYes: () => void) {
+  if (Platform.OS === 'web') { if (globalThis.confirm?.(`${title}\n${message}`)) onYes(); return; }
+  Alert.alert(title, message, [{ text: 'إلغاء', style: 'cancel' }, { text: action, onPress: onYes }]);
+}
 const empty = { officeName: '', officePhone: '', adminName: '', adminPhone: '', adminPassword: '' };
 
 /** Platform owner console: create offices with their first admin, suspend or reactivate them. */
@@ -23,8 +34,16 @@ export default function PlatformScreen() {
     // admins is a JSON column in the generated types; its shape is fixed by platform_list_offices().
     return (data ?? []) as unknown as OfficeRow[];
   }, []));
+  const requests = useResource(useCallback(async () => {
+    const { data, error } = await supabase.rpc('platform_list_office_requests');
+    if (error) throw error;
+    return (data ?? []) as RequestRow[];
+  }, []));
   const [form, setForm] = useState(empty); const [created, setCreated] = useState('');
   const op = useOperation(offices.reload);
+  // Approving lists the office below, so a decision reloads both lists.
+  const reviewOp = useOperation(() => { requests.reload(); offices.reload(); });
+  const pending = requests.data?.filter((q) => q.status === 'pending').length ?? 0;
   const set = (key: keyof typeof empty) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
 
   const createOffice = () => void op.run(async () => {
@@ -41,10 +60,39 @@ export default function PlatformScreen() {
     const { error } = await supabase.rpc('platform_set_office_status', { p_office: office.id, p_status: status });
     if (error) throw new Error('تعذر تغيير حالة المكتب');
   }, status === 'active' ? 'تم تفعيل المكتب' : 'تم إيقاف المكتب');
+  const review = (q: RequestRow, approve: boolean) => askFirst(
+    approve ? 'الموافقة على الطلب' : 'رفض الطلب',
+    approve ? `سيُفعَّل «${q.office_name}» ويستطيع مديره الدخول وإضافة فريقه.` : `الرفض نهائي: لن يُفتح «${q.office_name}»، ويُحرَّر رقم هاتف مقدّم الطلب ليُستخدم في طلب جديد.`,
+    approve ? 'موافقة' : 'رفض',
+    () => void reviewOp.run(async () => {
+      await manageUsers('review_office_request', { office_id: q.office_id, approve });
+    }, approve ? 'تمت الموافقة؛ أبلغ المدير أن يسجّل الدخول' : 'تم رفض الطلب'),
+  );
 
   return <View style={styles.page}><ScrollView keyboardShouldPersistTaps="handled">
     <HeroHeader title="إدارة المنصة" subtitle={access?.full_name ? `مرحباً ${access.full_name}` : 'مالك المنصة'}/>
     <Sheet>
+      <LuxeCard>
+        <SectionTitle icon="mail-unread-outline" title={pending ? `طلبات المكاتب التجريبية (${pending})` : 'طلبات المكاتب التجريبية'}/>
+        <BodyText muted>تصل من «اطلب مكتباً تجريبياً» في شاشة الدخول. لا يدخل المدير ولا تُحفظ أي بيانات للمكتب قبل موافقتك.</BodyText>
+        {requests.loading && !requests.data ? <LoadingState/> : requests.error ? <ErrorState message={requests.error} onRetry={requests.reload}/> : !requests.data?.length ? <EmptyState title="لا توجد طلبات" message="ستظهر هنا الطلبات الجديدة."/> :
+          requests.data.map((q) => <View key={q.office_id} style={styles.office}>
+            <View style={[styles.officeHead, { flexDirection: row }]}>
+              <Text style={styles.officeName}>{q.office_name}</Text>
+              <Pill label={statusLabel[q.status]} tone={requestTone[q.status]}/>
+            </View>
+            <Text selectable style={styles.meta}>المدير: {q.admin_name ?? '—'}{q.admin_phone ? ` · ${ltr(q.admin_phone)}` : ''}</Text>
+            {q.office_phone ? <Text selectable style={styles.meta}>هاتف المكتب: {ltr(q.office_phone)}</Text> : null}
+            {q.note ? <Text style={styles.meta}>ملاحظة: {q.note}</Text> : null}
+            <Text style={styles.meta}>تاريخ الطلب: {formatDayMonth(q.requested_at)}</Text>
+            {q.status === 'pending' ? <>
+              <Button label="موافقة وتفعيل المكتب" disabled={reviewOp.busy} onPress={() => review(q, true)}/>
+              <Button label="رفض" variant="secondary" disabled={reviewOp.busy} onPress={() => review(q, false)}/>
+            </> : null}
+          </View>)}
+        {reviewOp.message ? <Text accessibilityLiveRegion="polite" style={styles.created}>{reviewOp.message}</Text> : null}
+        {reviewOp.error ? <Text accessibilityLiveRegion="polite" style={styles.error}>{reviewOp.error}</Text> : null}
+      </LuxeCard>
       <LuxeCard>
         <SectionTitle icon="business-outline" title="مكتب جديد"/>
         <BodyText muted>ينشئ المكتب وحساب مديره. المدير يضيف بعدها المحامين والموظفين من شاشة «فريق المكتب».</BodyText>

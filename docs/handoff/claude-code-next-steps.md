@@ -1,71 +1,56 @@
-# Claude Code — Next Steps
+# Engineering handoff — 2026-10-01 integration
 
-## Current status
+## Integrated source
 
-- PR #10 (Phase 1 phone sign-in, roles, RLS, Expo SDK 57) is merged into `main`.
-- Supabase project: `ngckrfvsjggpnaddivyq`.
-- Migration history reconciled (branch `phase2/migration-reconciliation`, merged): the repository files match the live `supabase_migrations.schema_migrations` byte for byte, and all migrations replay in order on a clean PostgreSQL 17 (`supabase/tests/local/supabase_stub.sql`).
-- **Phase 2 (branch `phase2/supabase-clients-matters`): Clients and Matters moved to Supabase.** Migration `20260929081219_phase2_clients_matters` is applied to the live project. The app reads and writes clients, matters and matter parties only through `apps/mobile/src/data/supabase/*`; RLS is the security boundary.
+Integration branch: `codex/integrate-trial-release`.
+- Existing offline foundation preserved in `b84d51b`.
+- `origin/claude/determined-newton-5a1kyb` merged in `7336f4a`.
+- `origin/claude/youthful-babbage-5kkk9r` merged in `c18e509`.
+- Integration corrections follow those commits. This document supersedes the older cloud-only handoff.
 
-## Migration source of truth
+Supabase project: `ngckrfvsjggpnaddivyq`. All 26 applied migration versions are present, including the nine offline-foundation migrations and the two trial-office migrations. Four obsolete duplicate 2026092817* files were removed after comparing them with the canonical applied versions. Do not recreate them. A clean PostgreSQL 18 replay using `supabase/tests/local/supabase_stub.sql` passed.
 
-The authoritative applied migration history is:
+Latest migration: `20261001095602_trial_integration_guards.sql`, applied on the project. Edge function `manage-users`: **version 8, ACTIVE**, `verify_jwt=false`. Public request/bootstrap actions are intentional; account-management actions still validate the caller and use service-only SQL contracts.
 
-1. `20260927113413_maktabi_init`
-2. `20260927114655_drop_superseded_draft_schema`
-3. `20260927114753_core_schema_offices_profiles_legal_records`
-4. `20260927114857_integrity_triggers_audit_and_auth_provisioning`
-5. `20260927114928_row_level_security_policies`
-6. `20260927114940_storage_legal_documents_bucket`
-7. `20260928140727_client_role_enum`
-8. `20260928140850_platform_owner_client_portal_access`
-9. `20260928141155_svc_actor_info`
-10. `20260928141547_fix_bootstrap_owner_delete`
-11. `20260929081219_phase2_clients_matters` — `clients.whatsapp` (reception may edit it); `matter_parties` references a client instead of copying its name (exactly one of `client_id` / `display_name`, a client once per matter); `public.save_matter(p_matter, p_parties)`, SECURITY INVOKER, saves a matter and its parties in one transaction.
-12. `20260929093954_sudan_only_defaults` — the app is Sudan-only (product decision 2026-09-29): office/payment defaults `SD`/`SDG`/`Africa/Khartoum`, payment amounts with two decimals, office numbering year in Khartoum time, the Kuwait civil-ID rule dropped, `clients_national_id_digits` (the Sudanese national number is digits only), `payment_method` value `knet` renamed to `bankak`, `private.bootstrap_office` defaults `SD`/`SDG`.
-13. `20260929100948_sudanese_phone_numbers` — every stored phone number (clients phone/secondary/whatsapp, offices, profiles) must be Sudanese E.164: `^\+249[1-9][0-9]{8}$`.
+## Data architecture
 
-Do not create replacement migration versions for these entries. New database changes must use new later migration versions only.
+- UI → `src/data/repositories.ts`.
+- Clients/matters/parties/assignments use `sharedRepositories` and the encrypted SQLite/IndexedDB operational store, durable outbox, revision-aware RPCs, tenant RLS and scoped cached access.
+- Appointments/stages/deadlines/notes/templates/events use the server workflow repository. They currently need a connection.
+- Financial entries/documents/settings remain in each user's encrypted legacy vault. A locked vault is labeled in the dashboard. No shared financial ledger or Storage upload queue is claimed.
+- Version-1 vaults retain their original records under `legacy`. Explicitly imported case links recover the existing financial/document workflow. Original local schedules/notes remain preserved in legacy data; this release does not upload them automatically.
+- Local repositories bind to the unlocked vault session: a late write from a prior account cannot persist into the next account.
+- The dashboard uses the authenticated name, cached clients/cases, server schedules/activity, and explicitly local finance. Unavailable server schedule counts show an unavailable state.
 
-## What Phase 2 changed in the app
+## Corrections after merge
 
-- `src/data/supabase/`: typed repositories (`database.types.ts` generated from the live schema), row/domain mappers, Arabic error mapping (`RepositoryError`, technical details kept on the error).
-- Clients: list (non-archived), archived list, get, create/update (upsert by id, never sends `office_id` or `status`), archive/restore by status. No deletes anywhere.
-- Matters: list/get/by client/active, create/update through `save_matter`, status change, assigned lawyer (admin reassigns; a lawyer's new matter is assigned to themselves — enforced by `guard_matters`). Client names are always joined from `clients`, never copied.
-- Device vault (`src/data/localStore.ts`, snapshot version 2) now holds only matter workflows (appointments, documents, fees, receipts, expenses, deposits, stages, deadlines, notes, activity) and office settings, keyed by the server matter id. Every workflow write re-reads the matter from the server; closing a matter changes its server status first. Version-1 vaults keep their old client/matter records encrypted and unread under `legacy`.
-- Dashboard: client and active-matter counts from Supabase, greeting from the signed-in user; sessions/deadlines/fees/activity from the device and labelled as such.
-- Reception: no matter screens (RLS gives none), contact-only client edits. Role helpers in `src/auth/access.ts` mirror the database rules; the database enforces them.
+Preserved existing case types and expert parties; repaired Windows Vitest alias resolution; restored client archive/restore through sync; maintained legacy import after snapshot upgrade; bounded saved-session startup; actually executes the lazy login-audit RPC; pending accounts receive their specific access message.
 
-## How it was verified
+The additive SQL patch denies pending/suspended login-audit writes and counts all valid public office-request attempts (including duplicate phones/Auth failures): 100/day global, 10/day per source, plus existing successful-request limits. The source fallback is still the global budget when a trustworthy IP header is unavailable. Responses are padded to at least two seconds as a timing mitigation, not a constant-time guarantee.
 
-- `supabase/tests/phase1_access.sql`, `supabase/tests/phase2_clients_matters.sql` (44 checks, `failures=0`) and `supabase/tests/sudan_only.sql` (22 checks, `failures=0`) on the live project and on a fresh local replay.
-- Live checks after the migration: columns, constraints, FKs, indexes, RLS enabled with unchanged policies, `save_matter` not SECURITY DEFINER, execute granted to `authenticated` only. Security advisors: only the four pre-existing intentional SECURITY DEFINER RPC warnings.
-- `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm typecheck` (also with generated typed routes), `pnpm test` (domain 31, mobile 116), `pnpm build`.
-- `supabase/tests/local/e2e/`: the exported web app in Chromium against the replayed database behind a real PostgREST 12 — 15 scenarios (CRUD, relationships, reload, new device, Office A/B isolation, lawyer and reception rules), each checked in the database. GoTrue is simulated by a small gateway; the live Supabase API host was not reachable from the build environment.
+Turbo build inputs now include public Supabase variables and .env files; the mobile build clears Metro's cache.
 
-## Immediate next work
+## Verification
 
-1. Sudan-only is decided and done: migrations 12–13; the national number is digits only with no fixed length; every phone number is Sudanese (+249), enforced by the shared rule in `packages/domain/src/phone.ts` (app), its identical copy in `manage-users` (redeployed as version 6), and database constraints. The identity enum still contains other document types (`civil_id`, `passport`, …) and the column is still named `civil_id`; renaming them is optional cleanup.
-2. Move matter workflows to the existing Supabase tables (`appointments`, `documents` + Storage, `payments`, `tasks`) with the same repository pattern, then retire the device vault for them.
-3. Offline/sync layer behind the domain repository interfaces (queue, idempotent writes with device UUIDs, conflict handling).
-4. Duplicate detection by phone / similar name (national number is already unique per office).
-5. Add migration replay + the SQL tests to CI (the local stub makes this possible without Docker).
-6. Build hygiene: Turbo's `build` cache and Metro's cache do not key on `EXPO_PUBLIC_*`/`.env`; use `pnpm build --force` and `expo export --clear` until fixed.
+See [current integration evidence](../verification/trial-integration-2026-10-01.md).
+- 169 mobile + 36 domain tests passed.
+- Mobile TypeScript and Expo lint passed.
+- Android/iOS/Web exports passed; no native APK was built by this integration run.
+- Clean migration replay and all seven SQL test scripts passed locally.
+- New SQL guard tests also passed against the linked project in a rolled-back transaction.
+- Browser request form/navigation and required-field validation passed.
+- General Auth signup was disabled and saved; screenshot in verification.
+- Leaked-password protection remains disabled: project is Free, UI requires Pro.
+- Full live Auth request → approval smoke test was blocked by automatic approval review before execution. No live office/account was created by that attempt.
 
-## Authentication security
+## Remaining release work
 
-Public self-signup must remain disabled. Accounts should be created only through the trusted server-side `manage-users` flow according to the Phase 1 role model.
+1. Independently review critical integration/auth/sync changes before production acceptance (repository collaboration policy).
+2. With explicit permission, run the disposable live request/account test, approve only its exact office, then remove only the recorded synthetic fixtures. The prepared script is `apps/mobile/scripts/verify-trial-api.mjs`; its manifest contains a temporary password and must be protected and removed. Do not run it against production without that permission.
+3. Link EAS to the existing project (`eas init` if no projectId), build preview APK, and verify Android cold start, SQLite/SecureStore, offline edits, reconnect, two users/devices and the office-approval flow.
+4. Validate legacy import against a backed-up genuine dataset.
+5. Add database replay/SQL checks to CI; implement shared finance/documents and offline server workflows as separate slices.
 
-Verify in Supabase Dashboard: Authentication → Sign In / Providers (or Auth settings) → disable **Allow new users to sign up**.
+## Rules retained
 
-Do not replace this control with a frontend-only restriction.
-
-## Engineering rules
-
-- Do not bypass RLS.
-- Never place a `service_role` key in the mobile app.
-- Screens never call Supabase directly for clients and matters; use `src/data/repositories.ts`.
-- Do not hard-delete legal or business records; archive by status.
-- Do not modify Sudan-specific defaults (currency, timezone, identity, payment methods) without explicit product approval.
-- Run `supabase/tests/phase1_access.sql` and `supabase/tests/phase2_clients_matters.sql` after any change to permissions, clients, matters or parties, and `supabase/tests/sudan_only.sql` after any change to defaults, identity, phone numbers or payments.
-- Update README and this handoff whenever architecture or migration state changes.
+Keep Sudan phone/currency/timezone decisions. Never put service_role in mobile. Preserve RLS and office membership checks. Never silently overwrite revision conflicts or upload demo fixtures. Never delete genuine office/legal records. Update README/roadmap/handoff with changes. The Master Vision is unchanged.

@@ -28,6 +28,9 @@ describe('access routing', () => {
     const reception = user({ role: 'reception' });
     expect(canUseMatters(reception)).toBe(false);
     expect(canOpen(reception, ['matters', 'new'])).toBe(false);
+    // Template management is restricted to office administrators.
+    expect(canOpen(reception, ['office', 'procedures'])).toBe(false);
+    expect(canOpen(user({ role: 'lawyer' }), ['office', 'procedures'])).toBe(false);
     expect(canOpen(reception, ['clients', 'new'])).toBe(true);
     expect(canEditClientDetails(reception)).toBe(false);
     for (const role of ['admin', 'lawyer', 'employee'] as const) {
@@ -38,6 +41,11 @@ describe('access routing', () => {
     expect(canUseMatters(user({ role: 'client', client_id: 'c1' }))).toBe(false);
     expect(canUseMatters(user({ role: 'admin', is_active: false }))).toBe(false);
     expect(canUseMatters(undefined)).toBe(false);
+    for (const status of ['pending', 'rejected'] as const) {
+      const requester = user({ role: 'admin', office: { ...office, status } });
+      expect(canUseMatters(requester)).toBe(false);
+      expect(canOpen(requester, ['(tabs)'])).toBe(false);
+    }
   });
   it('never lets a signed-in user stay on the sign-in screens or splash', () => {
     expect(canOpen(user({}), ['(auth)', 'login'])).toBe(false);
@@ -47,6 +55,8 @@ describe('access routing', () => {
     expect(accessProblem(user({ role: null, office: null }))).toMatch('غير مرتبط');
     expect(accessProblem(user({ is_active: false }))).toMatch('إيقاف');
     expect(accessProblem(user({ office: { ...office, status: 'suspended' } }))).toMatch('موقوف');
+    expect(accessProblem(user({ role: 'admin', office: { ...office, status: 'pending' } }))).toMatch('قيد المراجعة');
+    expect(accessProblem(user({ role: 'admin', office: { ...office, status: 'rejected' } }))).toMatch('لم تتم الموافقة');
     expect(accessProblem(user({}))).toBeNull();
     expect(accessProblem(undefined)).not.toBeNull();
   });

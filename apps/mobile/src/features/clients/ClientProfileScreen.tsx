@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Alert, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { clientKinds, clientStatuses, matterStatuses, matterTypes } from "@maktabi/domain";
+import { clientKinds, matterStatuses, matterTypes } from "@maktabi/domain";
 import {
   Badge,
   BodyText,
@@ -16,15 +16,15 @@ import {
   LoadingState,
   SectionHeader,
 } from "@maktabi/ui";
-import { useAuth } from "@/auth/AuthProvider";
-import { canEditClientDetails, canUseMatters } from "@/auth/access";
 import {
   clientRepository,
   matterRepository,
   profileRepository,
 } from "@/data/repositories";
-import { deviceNotice, money, serverNotice, useResource } from "../shared/hooks";
-import { useOperation } from "../shared/useOperation";
+import { demoNotice, money, useResource } from "../shared/hooks";
+import { isUnlocked } from '@/data/vault';
+import { useAuth } from '@/auth/AuthProvider';
+import { can } from '@/auth/permissions';
 const sections = {
   overview: "نظرة عامة",
   matters: "الملفات",
@@ -36,24 +36,18 @@ const sections = {
 export default function ClientProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const [section, setSection] = useState("overview");
   const { access } = useAuth();
-  const mattersAllowed = canUseMatters(access);
-  const canEdit = canEditClientDetails(access);
+  const [section, setSection] = useState("overview");
   const fetchProfile = useCallback(async () => {
-    const [client, matters] = await Promise.all([
+    const [client, matters, profile] = await Promise.all([
       clientRepository.getById(id),
-      mattersAllowed ? matterRepository.listByClient(id) : Promise.resolve([]),
+      matterRepository.listByClient(id),
+      isUnlocked() ? profileRepository.getByClient(id) : Promise.resolve(null),
     ]);
-    if (!client) throw new Error("العميل غير موجود أو لا تملك صلاحية الوصول إليه");
-    const profile = await profileRepository.getByClient(id, matters);
-    // The client record's own creation date comes from the server.
-    profile.activity.push({ title: "إضافة العميل", date: client.createdAt.slice(0, 10) });
+    if (!client) throw new Error("العميل غير موجود");
     return { client, matters, profile };
-  }, [id, mattersAllowed]);
+  }, [id]);
   const { data, error, loading, reload } = useResource(fetchProfile);
-  const op = useOperation(reload);
-  const [archiving, setArchiving] = useState(false);
   if (error)
     return (
       <FormPage title="ملف العميل">
@@ -66,6 +60,13 @@ export default function ClientProfileScreen() {
     );
   if (!data) return <LoadingState />;
   const { client, matters, profile } = data;
+  if (!profile) return <FormPage title="ملف العميل"><Card><SectionHeader title={client.displayName}/><BodyText>الهاتف: {client.phone}</BodyText><BodyText>العملاء والقضايا مشتركة عبر المزامنة. المالية والمرفقات السابقة تحتاج فتح بيانات هذا الجهاز حتى تُنقل.</BodyText>
+    <Button label="فتح العمليات المحلية" onPress={() => router.push('/office/legacy')}/>
+    <Button label="تعديل العميل" variant="secondary" onPress={() => router.push({ pathname: '/clients/[id]/edit', params: { id } })}/>
+    {can(access,'edit_cases') ? <Button label="قضية جديدة" onPress={() => router.push({ pathname: '/matters/new', params: { clientId: id } })}/> : null}
+    {matters.map(m => <Button key={m.id} label={`${m.reference} · ${m.title}`} variant="secondary" onPress={() => router.push({ pathname: '/matters/[id]', params: { id: m.id } })}/>)}
+    <Button label="العودة للعملاء" variant="secondary" onPress={() => router.replace('/(tabs)/clients')}/>
+  </Card></FormPage>;
   const finances = (
     <Card>
       <SectionHeader title="أتعاب المحامي" />
@@ -79,10 +80,7 @@ export default function ClientProfileScreen() {
       <SectionHeader title="المصروفات" />
       <BodyText>إجمالي المصروفات: {money(profile.expenses)}</BodyText>
       <BodyText muted>
-        الأمانات منفصلة عن الأتعاب والمصروفات. المبالغ بالجنيه السوداني.
-      </BodyText>
-      <BodyText muted>
-        {deviceNotice}
+        الأمانات منفصلة عن الأتعاب والمصروفات. القيم المحلية بالجنيه السوداني.
       </BodyText>
     </Card>
   );
@@ -128,9 +126,6 @@ export default function ClientProfileScreen() {
       <Card>
         <Text style={s.title}>{client.displayName}</Text>
         <Badge label={clientKinds[client.kind]} />
-        {client.status && client.status !== "ACTIVE" ? (
-          <Badge label={clientStatuses[client.status]} tone="danger" />
-        ) : null}
         {client.contactPerson ? (
           <BodyText>المسؤول: {client.contactPerson}</BodyText>
         ) : null}
@@ -138,29 +133,27 @@ export default function ClientProfileScreen() {
         <BodyText>واتساب: {client.whatsapp || "غير مسجل"}</BodyText>
         <View style={s.row}>
           <Button
-            label={canEdit ? "تعديل العميل" : "تعديل بيانات التواصل"}
+            label="تعديل العميل"
             onPress={() =>
               router.push({ pathname: "/clients/[id]/edit", params: { id } })
             }
           />
-          {mattersAllowed && client.status !== "ARCHIVED" ? (
-            <Button
-              label="ملف جديد"
-              onPress={() =>
-                router.push({
-                  pathname: "/matters/new",
-                  params: { clientId: id },
-                })
-              }
-            />
-          ) : null}
+          <Button
+            label="ملف جديد"
+            onPress={() =>
+              router.push({
+                pathname: "/matters/new",
+                params: { clientId: id },
+              })
+            }
+          />
           <Button
             label="واتساب"
             variant="secondary"
             onPress={() =>
               Alert.alert(
                 "معاينة واتساب",
-                `الرقم: ${client.whatsapp || client.phone}\nإرسال الرسائل عبر واتساب غير مفعّل بعد في التطبيق.`,
+                `الرقم: ${client.whatsapp || client.phone}\nإرسال الرسائل من التطبيق لم يُفعّل بعد.`,
               )
             }
           />
@@ -170,40 +163,13 @@ export default function ClientProfileScreen() {
             onPress={() =>
               Alert.alert(
                 "معاينة الاتصال",
-                `الرقم: ${client.phone}\nالاتصال المباشر غير مفعّل بعد في التطبيق.`,
+                `رقم الهاتف: ${client.phone}\nفتح الاتصال من التطبيق لم يُفعّل بعد.`,
               )
             }
           />
         </View>
       </Card>
-      {canEdit ? (
-        client.status === "ARCHIVED" ? (
-          <Button
-            label="استعادة العميل"
-            variant="secondary"
-            disabled={op.busy}
-            onPress={() => void op.run(() => clientRepository.setStatus(id, "ACTIVE"), "تمت استعادة العميل")}
-          />
-        ) : archiving ? (
-          <Card>
-            <BodyText>الأرشفة تخفي العميل من القائمة وتحتفظ بكل بياناته وقضاياه، ويمكن استعادته لاحقاً.</BodyText>
-            <Button
-              label="تأكيد أرشفة العميل"
-              disabled={op.busy}
-              onPress={() => void op.run(async () => { await clientRepository.setStatus(id, "ARCHIVED"); setArchiving(false); }, "تمت أرشفة العميل")}
-            />
-            <Button label="إلغاء" variant="secondary" onPress={() => setArchiving(false)} />
-          </Card>
-        ) : (
-          <Button label="أرشفة العميل" variant="secondary" onPress={() => setArchiving(true)} />
-        )
-      ) : null}
-      {op.error || op.message ? (
-        <Text accessibilityLiveRegion="polite" style={op.error ? s.error : s.text}>
-          {op.error || op.message}
-        </Text>
-      ) : null}
-      <BodyText muted>{serverNotice}</BodyText>
+      <BodyText muted>{demoNotice}</BodyText>
       <ChoiceField
         label="أقسام العميل"
         value={section}
@@ -239,12 +205,7 @@ export default function ClientProfileScreen() {
       {section === "receipts" ? receipts : null}
       {section === "documents" ? documents : null}
       {section === "matters" ? (
-        !mattersAllowed ? (
-          <EmptyState
-            title="لا تملك صلاحية الاطلاع على القضايا"
-            message="يستطيع موظف الاستقبال إدارة بيانات العملاء فقط."
-          />
-        ) : matters.length ? (
+        matters.length ? (
           matters.map((m) => (
             <Card key={m.id}>
               <BodyText>

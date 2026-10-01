@@ -1,7 +1,10 @@
 // What a signed-in user may open. Pure functions so routing rules are unit-tested;
 // the server enforces the same rules with RLS and the manage-users function.
+import { can } from './permissions';
 
 export type OfficeRole = 'admin' | 'lawyer' | 'employee' | 'reception' | 'client';
+/** pending / rejected: a trial office requested from the sign-in screen, before or after the platform owner's decision. */
+export type OfficeStatus = 'active' | 'suspended' | 'closed' | 'pending' | 'rejected';
 export interface Access {
   user_id: string;
   full_name: string;
@@ -9,7 +12,7 @@ export interface Access {
   role: OfficeRole | null;
   is_active: boolean;
   client_id: string | null;
-  office: { id: string; name: string; status: 'active' | 'suspended' | 'closed' } | null;
+  office: { id: string; name: string; status: OfficeStatus } | null;
   platform_admin: boolean;
 }
 
@@ -18,19 +21,17 @@ export const roleLabels: Record<OfficeRole, string> = {
 };
 
 export const isStaff = (a: Access | undefined) => !!a?.role && a.role !== 'client' && a.is_active && a.office?.status === 'active';
-// The next three mirror database rules so screens can show the right state; the database enforces them.
-/** Matters: RLS gives reception no access to matters or their parties. */
-export const canUseMatters = (a: Access | undefined) => isStaff(a) && a?.role !== 'reception';
-/** Reception may only change a client's contact details (guard_clients): not the name, identity, notes or status. */
+export const canUseMatters = (a: Access | undefined) => can(a, 'view_cases');
 export const canEditClientDetails = (a: Access | undefined) => isStaff(a) && a?.role !== 'reception';
-/** Only an office admin may change the lawyer of an existing matter (guard_matters). */
-export const canReassignMatters = (a: Access | undefined) => isStaff(a) && a?.role === 'admin';
+export const canReassignMatters = (a: Access | undefined) => can(a, 'assign_cases');
 
 /** Why this account cannot use the app, or null if it can. */
 export function accessProblem(a: Access | null | undefined): string | null {
   if (!a) return 'تعذر قراءة بيانات الحساب';
   if (a.platform_admin && !a.office) return null;
   if (!a.office || !a.role) return 'هذا الحساب غير مرتبط بأي مكتب بعد. تواصل مع مدير مكتبك.';
+  if (a.office.status === 'pending') return 'طلب مكتبك قيد المراجعة لدى إدارة المنصة. ستتمكن من الدخول بعد الموافقة عليه.';
+  if (a.office.status === 'rejected') return 'لم تتم الموافقة على طلب مكتبك. تواصل مع إدارة المنصة.';
   if (!a.is_active) return 'تم إيقاف هذا الحساب. تواصل مع مدير مكتبك.';
   if (a.office.status !== 'active') return 'اشتراك المكتب موقوف حالياً. تواصل مع إدارة المنصة.';
   return null;
@@ -50,7 +51,9 @@ export function canOpen(a: Access, segments: string[]): boolean {
   if (first === 'portal') return a.role === 'client';
   if (first === '(auth)') return false;
   if (first === 'office' && second === 'team') return a.role === 'admin';
-  if (first === 'matters') return canUseMatters(a);
+  if (first === 'office' && second === 'import') return can(a, 'manage_team');
+  if (first === 'office' && ['settings', 'procedures'].includes(second ?? '')) return can(a, second === 'settings' ? 'manage_office_settings' : 'manage_templates');
+  if (first === 'matters' || (first === '(tabs)' && second === 'matters')) return can(a, 'view_cases');
   // Office workspace: (tabs), clients, matters, office/*
   return isStaff(a);
 }

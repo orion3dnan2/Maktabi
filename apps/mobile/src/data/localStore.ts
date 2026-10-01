@@ -1,17 +1,18 @@
-import type { Matter, MatterStatus } from '@maktabi/domain';
+import type { Matter } from '@maktabi/domain';
 import { newId } from './ids';
-import { emptyWorkflow, paidTotal, trustBalance, type MatterWorkflow, type WorkflowRepository } from './workflow';
+import { emptyWorkflow, paidTotal, trustBalance, type DeviceWorkflowRepository, type MatterWorkflow } from './workflow';
 import { defaultOffice, type OfficeData } from './office';
 import { createOfficeOperations } from './officeOperations';
 
 /**
- * Device-local office data: each matter's workflow (appointments, documents, fees, receipts,
- * procedure stages, deadlines, notes, activity) and the office settings. It lives in the user's
- * encrypted vault on this device and is not synchronized yet.
+ * Device-local office data: each matter's documents, fees, receipts, expenses and trust deposits
+ * (with their activity lines), and the office settings. It lives in the user's encrypted vault on
+ * this device and is not synchronized yet.
  *
- * Clients and matters are NOT stored here: Supabase is their only source of truth. Workflows are
- * keyed by the server's matter id, and every write first reads the matter from the server, so a
- * workflow can only be changed for a matter the user can currently see, in its current status.
+ * Clients, matters, appointments, procedure stages, deadlines and notes are NOT stored here:
+ * Supabase is their only source of truth. Workflows are keyed by the server's matter id, and every
+ * write first reads the matter from the server, so a workflow can only be changed for a matter the
+ * user can currently see, in its current status.
  */
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -33,8 +34,9 @@ export interface ProfileRepository {
 export interface MatterSource {
   getById(id: string): Promise<Matter | null>;
   listByClient(clientId: string): Promise<Matter[]>;
-  setStatus(id: string, status: MatterStatus): Promise<void>;
 }
+/** Procedure stages live on the server; fees and expenses may name one of them. */
+export interface StageSource { stageIds(matterId: string): Promise<string[]> }
 
 /** Version 1 (before Phase 2) also held clients, matters and profiles, and workflows keyed by device-made matter ids. */
 export interface LegacyLocalRecords { clients: unknown[]; matters: unknown[]; profiles: unknown[]; workflows: unknown[] }
@@ -65,10 +67,7 @@ export function isLocalSnapshot(value: unknown): boolean {
 }
 export const emptySnapshot = (): LocalSnapshot => ({ version: 2, workflows: [], office: defaultOffice() });
 
-const nextAppointment = (w: MatterWorkflow) =>
-  w.appointments.filter((a) => a.status === 'SCHEDULED').sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0]?.startsAt;
-
-export function createLocalStore(matters: MatterSource) {
+export function createLocalStore(matters: MatterSource, stages: StageSource, legacyId?: (id: string) => Promise<string | undefined>) {
   let office = defaultOffice();
   let legacy: LegacyLocalRecords | undefined;
   const workflows = new Map<string, MatterWorkflow>();
@@ -79,6 +78,14 @@ export function createLocalStore(matters: MatterSource) {
     const matter = await matters.getById(id);
     if (!matter) throw new Error('القضية غير موجودة أو لا تملك صلاحية الوصول إليها');
     current.set(id, matter);
+    if (!workflows.has(id) && legacy && legacyId) {
+      const oldId = await legacyId(id);
+      const entry = legacy.workflows.find((row) => Array.isArray(row) && row[0] === oldId);
+      if (Array.isArray(entry) && entry[1] && typeof entry[1] === 'object') {
+        // Preserve the original in legacy; new writes use the verified shared matter id.
+        workflows.set(id, copy({ ...emptyWorkflow(), ...entry[1] }));
+      }
+    }
     return matter;
   };
   const requireMatter = (id: string) => {
@@ -100,27 +107,15 @@ export function createLocalStore(matters: MatterSource) {
   const scoped = <A extends unknown[], R>(operation: (id: string, ...rest: A) => Promise<R>) =>
     async (id: string, ...rest: A): Promise<R> => { await load(id); return operation(id, ...rest); };
 
-  const workflowRepository: WorkflowRepository = {
-    async getByMatter(id) { return getWorkflow(id); },
-    addAppointment: scoped(async (id, item: Parameters<WorkflowRepository['addAppointment']>[1]) => {
-      if (!item.title.trim() || !Number.isFinite(Date.parse(item.startsAt))) throw new Error('عنوان الموعد وتاريخه مطلوبان');
-      const w = writable(id);
-      w.appointments.push({ ...item, title: item.title.trim(), startsAt: new Date(item.startsAt).toISOString(), id: newId(), status: 'SCHEDULED' });
-      commitWorkflow(id, w, `جدولة موعد: ${item.title.trim()}`);
-    }),
-    setAppointmentStatus: scoped(async (id, appointmentId: string, status: Parameters<WorkflowRepository['setAppointmentStatus']>[2]) => {
-      const w = writable(id); const a = w.appointments.find((a) => a.id === appointmentId);
-      if (!a || !['SCHEDULED', 'COMPLETED', 'CANCELLED'].includes(status)) throw new Error('الموعد أو الحالة غير صحيحة');
-      a.status = status;
-      commitWorkflow(id, w, `${status === 'COMPLETED' ? 'إتمام' : status === 'CANCELLED' ? 'إلغاء' : 'إعادة جدولة'} الموعد: ${a.title}`);
-    }),
+  const workflowRepository: DeviceWorkflowRepository = {
+    async getByMatter(id) { await load(id); return getWorkflow(id); },
     setFees: scoped(async (id, amount: number) => {
       const w = writable(id);
       if (!Number.isSafeInteger(amount) || amount <= 0 || amount < paidTotal(w)) throw new Error('الأتعاب يجب أن تكون موجبة ولا تقل عن المدفوع');
       w.agreedFees = amount;
       commitWorkflow(id, w, 'تسجيل اتفاق الأتعاب');
     }),
-    recordPayment: scoped(async (id, receipt: Parameters<WorkflowRepository['recordPayment']>[1]) => {
+    recordPayment: scoped(async (id, receipt: Parameters<DeviceWorkflowRepository['recordPayment']>[1]) => {
       const w = writable(id);
       if (w.receipts.some((r) => r.id === receipt.id)) return;
       if (!receipt.id || !receipt.number.trim() || !receipt.method.trim() || !Number.isFinite(Date.parse(receipt.date))) throw new Error('بيانات الإيصال غير مكتملة');
@@ -129,39 +124,18 @@ export function createLocalStore(matters: MatterSource) {
       w.receipts.push(copy(receipt));
       commitWorkflow(id, w, `تسجيل دفعة وإصدار الإيصال ${receipt.number}`);
     }),
-    addDocument: scoped(async (id, document: Parameters<WorkflowRepository['addDocument']>[1]) => {
+    addDocument: scoped(async (id, document: Parameters<DeviceWorkflowRepository['addDocument']>[1]) => {
       const w = writable(id);
       if (!document.title.trim() || !document.name.trim() || !/^data:[\w.+/-]+;base64,[A-Za-z0-9+/]*={0,2}$/.test(document.dataUri) || document.dataUri.length > 1500000) throw new Error('اختر مستنداً صالحاً بحجم لا يتجاوز 1 ميجابايت');
       if (w.documents.some((d) => d.id === document.id)) return;
       w.documents.push(copy(document));
       commitWorkflow(id, w, `إرفاق مستند: ${document.title}`);
     }),
-    addNote: scoped(async (id, text: string) => {
-      if (!text.trim()) throw new Error('اكتب الملاحظة أولاً');
-      const w = writable(id); w.notes.unshift({ id: newId(), text: text.trim(), date: new Date().toISOString() });
-      if (!w.stages.length) w.currentStage = text.trim();
-      commitWorkflow(id, w, 'إضافة ملاحظة متابعة');
-    }),
-    closeMatter: scoped(async (id) => {
-      const w = writable(id);
-      if (w.appointments.some((a) => a.status === 'SCHEDULED')) throw new Error('أكمل أو ألغِ المواعيد المعلقة قبل إغلاق القضية');
-      if (w.deadlines.some((d) => !d.completed) || w.stages.some((s) => s.status === 'ACTIVE' || s.status === 'PENDING')) throw new Error('أنهِ مراحل الإجراءات والمواعيد النهائية قبل الإغلاق');
-      // The status lives on the server; the local activity entry is written only after the server accepted it.
-      await matters.setStatus(id, 'CLOSED');
-      requireMatter(id).status = 'CLOSED';
-      commitWorkflow(id, w, 'إغلاق القضية');
-    }),
   };
 
-  const operations = createOfficeOperations({ get: () => copy(office), set: (value) => { office = copy(value); }, id: newId, matter: requireMatter, read: getWorkflow, write: writable, commit: commitWorkflow });
+  const operations = createOfficeOperations({ get: () => copy(office), set: (value) => { office = copy(value); }, id: newId, matter: requireMatter, read: getWorkflow, write: writable, commit: commitWorkflow, stageIds: stages.stageIds });
   const officeRepository = {
     ...operations,
-    appendProcedure: scoped(operations.appendProcedure),
-    saveStage: scoped(operations.saveStage),
-    transitionStage: scoped(operations.transitionStage),
-    addDeadline: scoped(operations.addDeadline),
-    completeDeadline: scoped(operations.completeDeadline),
-    finishSession: scoped(operations.finishSession),
     saveInstallments: scoped(operations.saveInstallments),
     issueReceipt: scoped(operations.issueReceipt),
     cancelReceipt: scoped(operations.cancelReceipt),
@@ -175,6 +149,7 @@ export function createLocalStore(matters: MatterSource) {
       const list = known ?? await matters.listByClient(id);
       const result: ClientProfileData = { agreedFees: 0, paidFees: 0, trustBalance: 0, expenses: 0, receipts: [], documents: [], activity: [] };
       for (const m of list.filter((m) => m.parties.some((p) => p.isPrimary && p.clientId === id))) {
+        await load(m.id);
         if (!workflows.has(m.id)) continue;
         const w = getWorkflow(m.id);
         result.agreedFees += w.agreedFees;
@@ -190,14 +165,8 @@ export function createLocalStore(matters: MatterSource) {
     },
   };
 
-  /** Adds what this device knows about each matter: the next scheduled appointment and the current stage. */
-  const progress = async (list: Matter[]): Promise<Matter[]> => list.map((m) => {
-    const w = workflows.get(m.id);
-    return w ? { ...m, nextEventAt: nextAppointment(w), currentStage: w.currentStage } : m;
-  });
-
   return {
-    workflowRepository, officeRepository, profileRepository, progress,
+    workflowRepository, officeRepository, profileRepository,
     snapshot: (): LocalSnapshot => copy({ version: 2, workflows: [...workflows], office, ...(legacy ? { legacy } : {}) }),
     restore: (value: unknown) => {
       const snapshot = parseSnapshot(value);

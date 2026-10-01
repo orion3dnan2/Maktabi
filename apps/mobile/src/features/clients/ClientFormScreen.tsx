@@ -18,22 +18,15 @@ import {
   Input,
   LoadingState,
 } from "@maktabi/ui";
-import { useAuth } from "@/auth/AuthProvider";
-import { canEditClientDetails } from "@/auth/access";
 import { clientRepository, newId, OFFICE_ID } from "@/data/repositories";
-import { userMessage } from "@/data/supabase/errors";
-import { serverNotice, useResource, useUnsavedChanges } from "../shared/hooks";
-// What reception may change on an existing client (the database allows only contact details).
-const contactFields = new Set<keyof Client>(["phone", "whatsapp", "email", "address", "contactPerson"]);
+import { demoNotice, useResource, useUnsavedChanges } from "../shared/hooks";
 export default function ClientFormScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
-  const { access } = useAuth();
-  const contactOnly = !!id && !canEditClientDetails(access);
   const fetchClient = useCallback(async () => {
     if (id) {
       const existing = await clientRepository.getById(id);
-      if (!existing) throw new Error("العميل غير موجود أو لا تملك صلاحية الوصول إليه");
+      if (!existing) throw new Error("غير موجود");
       return existing;
     }
     return {
@@ -53,11 +46,6 @@ export default function ClientFormScreen() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
-  // Initialise the form once, while rendering, from the first loaded client.
-  if (resource.data && !client) {
-    setClient(resource.data);
-    setOriginal(JSON.stringify(resource.data));
-  }
   const { cancel, confirmation } = useUnsavedChanges(
     !saved && !!client && JSON.stringify(client) !== original,
   );
@@ -65,6 +53,11 @@ export default function ClientFormScreen() {
     if (saved && client)
       router.replace({ pathname: "/clients/[id]", params: { id: client.id } });
   }, [saved, client, router]);
+  // Initialize once from the loaded record; background pulls must not replace an edited draft.
+  if (resource.data && !client) {
+    setClient(resource.data);
+    setOriginal(JSON.stringify(resource.data));
+  }
   if (resource.error)
     return (
       <FormPage title="بيانات العميل">
@@ -121,7 +114,7 @@ export default function ClientFormScreen() {
       await clientRepository.save(clean);
       setSaved(true);
     } catch (e) {
-      setSaveError(userMessage(e, "تعذر الحفظ"));
+      setSaveError(e instanceof Error ? e.message : "تعذر الحفظ");
     } finally {
       setSaving(false);
     }
@@ -129,35 +122,26 @@ export default function ClientFormScreen() {
   return (
     <FormPage title={id ? "تعديل العميل" : "عميل جديد"}>
       {confirmation}
-      <BodyText muted>{serverNotice}</BodyText>
-      {contactOnly ? (
-        <>
-          <BodyText>يستطيع موظف الاستقبال تعديل بيانات التواصل فقط.</BodyText>
-          <BodyText>نوع العميل: {clientKinds[client.kind]}</BodyText>
-        </>
-      ) : (
-        <ChoiceField
-          label="نوع العميل"
-          value={client.kind}
-          options={choices(clientKinds)}
-          onChange={(v) => update("kind", v)}
-        />
-      )}
+      <BodyText muted>{demoNotice}</BodyText>
+      <ChoiceField
+        label="نوع العميل"
+        value={client.kind}
+        options={choices(clientKinds)}
+        onChange={(v) => update("kind", v)}
+      />
       {fields.map(([key, label]) => (
         <Input
           key={key}
           label={label}
           accessibilityLabel={label}
-          editable={!saving && (!contactOnly || contactFields.has(key))}
+          editable={!saving}
           value={String(client[key] ?? "")}
           onChangeText={(v) => update(key, v)}
           error={errors[key]}
           keyboardType={
             key === "phone" || key === "whatsapp"
               ? "phone-pad"
-              : key === "nationalId"
-                ? "number-pad"
-                : key === "email"
+              : key === "email"
                 ? "email-address"
                 : "default"
           }

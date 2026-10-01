@@ -13,7 +13,7 @@ const clientRow: ClientRow = {
   id: C1, office_id: 'office', client_type: 'organization', full_name: 'شركة الاختبار', phone: '+249900000101', whatsapp: null,
   contact_person: 'سلمى', registration_number: 'REG-1', address: 'الخرطوم', notes: null, email: 'a@example.test', civil_id: null,
   id_type: null, id_country: null, nationality: null, secondary_phone: null, status: 'archived', metadata: {},
-  created_at: '2026-09-29T10:00:00Z', created_by: null, updated_at: '2026-09-29T10:00:00Z',
+  created_at: '2026-09-29T10:00:00Z', created_by: null, revision: 1, updated_at: '2026-09-29T10:00:00Z',
 };
 
 describe('client mapping', () => {
@@ -67,9 +67,9 @@ describe('matter mapping', () => {
   it('keeps links to clients hidden by RLS and reads database-only values safely', () => {
     const matter = matterFromRow(matterRow({ client: null, lawyer: null, assigned_lawyer_id: null, matter_type: 'administrative', status: 'open', details: [] }));
     expect(matter.parties[0]).toMatchObject({ clientId: C1, displayName: HIDDEN_CLIENT_NAME });
-    expect(matter).toMatchObject({ type: 'OTHER', status: 'ACTIVE', details: {}, assignedLawyerId: undefined, assignedLawyerName: undefined });
+    expect(matter).toMatchObject({ type: 'ADMINISTRATIVE', status: 'ACTIVE', details: {}, assignedLawyerId: undefined, assignedLawyerName: undefined });
     const expert = matterFromRow(matterRow({ parties: [{ id: P2, client_id: null, display_name: 'خبير', party_role: 'expert', created_at: '2026-09-02T00:00:00Z', client: null }] }));
-    expect(expert.parties[1]?.role).toBe('OTHER');
+    expect(expert.parties[1]?.role).toBe('EXPERT');
   });
   it('sends the primary client as client_id and never copies client names into parties', () => {
     const matter: Matter = { ...matterFromRow(matterRow()), reference: ' MK-9 ', notes: '', details: { employer: ' شركة ', entitlements: ' ' } };

@@ -1,9 +1,9 @@
-# Local end-to-end check (Phase 2: clients and matters)
+# Local end-to-end check (clients, matters and the matter workflow)
 
 Runs the exported web app in Chromium against a **local replica**: every migration in
 `supabase/migrations` replayed on plain PostgreSQL 17 (with `../supabase_stub.sql`), served by a
-real PostgREST 12, so row-level security, guard triggers, foreign keys and `save_matter` behave as
-in the Supabase project. Nothing is sent to the live project.
+real PostgREST 12, so row-level security, guard triggers, foreign keys and the database functions
+(`save_matter`, `append_procedure`, `save_stage`, `finish_session`) behave as in the Supabase project. Nothing is sent to the live project.
 
 What is simulated: `gateway.cjs` stands in for the Supabase API gateway. It proxies `/rest/v1` to
 PostgREST and replaces GoTrue with a minimal password sign-in for the four seeded accounts
@@ -36,5 +36,12 @@ The scenarios need a freshly reset database. They cover: sign-in and role routin
 counts, client create/edit/search/archive/restore, matter create/edit with a lawyer, an additional
 client and an opponent, client names joined from the client record, reload and sign-in on a new
 device, Office B isolation (lists and direct links), duplicate identity numbers, a lawyer's
-assigned matters, and reception's contact-only access. Each scenario also checks the rows written
-to the database.
+assigned matters, and reception's contact-only access. Scenarios 16–22 cover the matter workflow
+on the server: appointments by type and the calendar, a procedure path whose stages the database
+keeps in order (start, complete with a reference and date, skip with a reason), a session outcome
+with the next session, deadlines and notes, closing refused while anything is open and then
+succeeding, the admin seeing the lawyer's work from another device, office templates, and the
+limits for reception and for Office B. Each scenario also checks the rows written to the database.
+
+A page reload locks the device vault and signs staff out by design, so the scenarios move between
+screens with `history.pushState` instead of `page.goto`.

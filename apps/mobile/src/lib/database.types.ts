@@ -1,6 +1,3 @@
-// Generated from the live Supabase schema (project ngckrfvsjggpnaddivyq) with the Supabase
-// type generator after migration 20260929093954_sudan_only_defaults. Do not edit by hand:
-// regenerate after every migration.
 export type Json =
   | string
   | number
@@ -30,7 +27,9 @@ export type Database = {
           location: string | null
           matter_id: string | null
           office_id: string
+          outcome: string | null
           reminder_at: string | null
+          stage_id: string | null
           starts_at: string
           status: Database["public"]["Enums"]["appointment_status"]
           title: string
@@ -48,7 +47,9 @@ export type Database = {
           location?: string | null
           matter_id?: string | null
           office_id?: string
+          outcome?: string | null
           reminder_at?: string | null
+          stage_id?: string | null
           starts_at: string
           status?: Database["public"]["Enums"]["appointment_status"]
           title: string
@@ -66,7 +67,9 @@ export type Database = {
           location?: string | null
           matter_id?: string | null
           office_id?: string
+          outcome?: string | null
           reminder_at?: string | null
+          stage_id?: string | null
           starts_at?: string
           status?: Database["public"]["Enums"]["appointment_status"]
           title?: string
@@ -107,6 +110,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "offices"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_stage_fk"
+            columns: ["office_id", "matter_id", "stage_id"]
+            isOneToOne: false
+            referencedRelation: "matter_stages"
+            referencedColumns: ["office_id", "matter_id", "id"]
           },
         ]
       }
@@ -170,6 +180,7 @@ export type Database = {
           office_id: string
           phone: string | null
           registration_number: string | null
+          revision: number
           secondary_phone: string | null
           status: Database["public"]["Enums"]["client_status"]
           updated_at: string
@@ -193,6 +204,7 @@ export type Database = {
           office_id?: string
           phone?: string | null
           registration_number?: string | null
+          revision?: number
           secondary_phone?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           updated_at?: string
@@ -216,6 +228,7 @@ export type Database = {
           office_id?: string
           phone?: string | null
           registration_number?: string | null
+          revision?: number
           secondary_phone?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           updated_at?: string
@@ -315,12 +328,233 @@ export type Database = {
           },
         ]
       }
+      matter_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          ended_at: string | null
+          id: string
+          is_primary: boolean
+          matter_id: string
+          office_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          ended_at?: string | null
+          id?: string
+          is_primary?: boolean
+          matter_id: string
+          office_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          ended_at?: string | null
+          id?: string
+          is_primary?: boolean
+          matter_id?: string
+          office_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matter_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matter_assignments_office_id_matter_id_fkey"
+            columns: ["office_id", "matter_id"]
+            isOneToOne: false
+            referencedRelation: "matters"
+            referencedColumns: ["office_id", "id"]
+          },
+          {
+            foreignKeyName: "matter_assignments_office_id_user_id_fkey"
+            columns: ["office_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "office_members"
+            referencedColumns: ["office_id", "user_id"]
+          },
+        ]
+      }
+      matter_deadlines: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string | null
+          due_at: string
+          id: string
+          legal_basis: string
+          matter_id: string
+          office_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_at: string
+          id?: string
+          legal_basis: string
+          matter_id: string
+          office_id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_at?: string
+          id?: string
+          legal_basis?: string
+          matter_id?: string
+          office_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matter_deadlines_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matter_deadlines_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matter_deadlines_matter_fk"
+            columns: ["office_id", "matter_id"]
+            isOneToOne: false
+            referencedRelation: "matters"
+            referencedColumns: ["office_id", "id"]
+          },
+          {
+            foreignKeyName: "matter_deadlines_office_id_fkey"
+            columns: ["office_id"]
+            isOneToOne: false
+            referencedRelation: "offices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      matter_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          id: number
+          kind: string
+          matter_id: string
+          office_id: string
+          subject: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          id?: never
+          kind: string
+          matter_id: string
+          office_id: string
+          subject?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          id?: never
+          kind?: string
+          matter_id?: string
+          office_id?: string
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matter_events_matter_fk"
+            columns: ["office_id", "matter_id"]
+            isOneToOne: false
+            referencedRelation: "matters"
+            referencedColumns: ["office_id", "id"]
+          },
+          {
+            foreignKeyName: "matter_events_office_id_fkey"
+            columns: ["office_id"]
+            isOneToOne: false
+            referencedRelation: "offices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      matter_notes: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          id: string
+          matter_id: string
+          office_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          matter_id: string
+          office_id?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          matter_id?: string
+          office_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matter_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matter_notes_matter_fk"
+            columns: ["office_id", "matter_id"]
+            isOneToOne: false
+            referencedRelation: "matters"
+            referencedColumns: ["office_id", "id"]
+          },
+          {
+            foreignKeyName: "matter_notes_office_id_fkey"
+            columns: ["office_id"]
+            isOneToOne: false
+            referencedRelation: "offices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       matter_parties: {
         Row: {
           client_id: string | null
           created_at: string
           display_name: string | null
           id: string
+          is_primary: boolean
           matter_id: string
           notes: string | null
           office_id: string
@@ -332,6 +566,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          is_primary?: boolean
           matter_id: string
           notes?: string | null
           office_id?: string
@@ -343,6 +578,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          is_primary?: boolean
           matter_id?: string
           notes?: string | null
           office_id?: string
@@ -373,6 +609,97 @@ export type Database = {
           },
         ]
       }
+      matter_stages: {
+        Row: {
+          authority: string
+          created_at: string
+          created_by: string | null
+          details: Json
+          document_ids: string[]
+          finished_at: string | null
+          id: string
+          matter_id: string
+          name: string
+          notes: string
+          office_id: string
+          position: number
+          procedure_name: string
+          reference: string
+          requirements: Json
+          skip_reason: string | null
+          stage_date: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["stage_status"]
+          updated_at: string
+        }
+        Insert: {
+          authority: string
+          created_at?: string
+          created_by?: string | null
+          details?: Json
+          document_ids?: string[]
+          finished_at?: string | null
+          id?: string
+          matter_id: string
+          name: string
+          notes?: string
+          office_id?: string
+          position: number
+          procedure_name: string
+          reference?: string
+          requirements?: Json
+          skip_reason?: string | null
+          stage_date?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["stage_status"]
+          updated_at?: string
+        }
+        Update: {
+          authority?: string
+          created_at?: string
+          created_by?: string | null
+          details?: Json
+          document_ids?: string[]
+          finished_at?: string | null
+          id?: string
+          matter_id?: string
+          name?: string
+          notes?: string
+          office_id?: string
+          position?: number
+          procedure_name?: string
+          reference?: string
+          requirements?: Json
+          skip_reason?: string | null
+          stage_date?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["stage_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matter_stages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matter_stages_matter_fk"
+            columns: ["office_id", "matter_id"]
+            isOneToOne: false
+            referencedRelation: "matters"
+            referencedColumns: ["office_id", "id"]
+          },
+          {
+            foreignKeyName: "matter_stages_office_id_fkey"
+            columns: ["office_id"]
+            isOneToOne: false
+            referencedRelation: "offices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       matters: {
         Row: {
           assigned_lawyer_id: string | null
@@ -390,6 +717,7 @@ export type Database = {
           office_id: string
           opened_at: string
           priority: Database["public"]["Enums"]["priority_level"]
+          revision: number
           status: Database["public"]["Enums"]["matter_status"]
           title: string
           updated_at: string
@@ -410,6 +738,7 @@ export type Database = {
           office_id?: string
           opened_at?: string
           priority?: Database["public"]["Enums"]["priority_level"]
+          revision?: number
           status?: Database["public"]["Enums"]["matter_status"]
           title: string
           updated_at?: string
@@ -430,6 +759,7 @@ export type Database = {
           office_id?: string
           opened_at?: string
           priority?: Database["public"]["Enums"]["priority_level"]
+          revision?: number
           status?: Database["public"]["Enums"]["matter_status"]
           title?: string
           updated_at?: string
@@ -461,6 +791,58 @@ export type Database = {
             columns: ["office_id"]
             isOneToOne: false
             referencedRelation: "offices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      office_members: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          joined_at: string | null
+          office_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          joined_at?: string | null
+          office_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          joined_at?: string | null
+          office_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "office_members_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "office_members_office_id_fkey"
+            columns: ["office_id"]
+            isOneToOne: false
+            referencedRelation: "offices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "office_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -596,6 +978,54 @@ export type Database = {
           },
         ]
       }
+      procedure_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          matter_types: Database["public"]["Enums"]["matter_type"][]
+          name: string
+          office_id: string
+          stages: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          matter_types: Database["public"]["Enums"]["matter_type"][]
+          name: string
+          office_id?: string
+          stages: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          matter_types?: Database["public"]["Enums"]["matter_type"][]
+          name?: string
+          office_id?: string
+          stages?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procedure_templates_office_id_fkey"
+            columns: ["office_id"]
+            isOneToOne: false
+            referencedRelation: "offices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -652,6 +1082,54 @@ export type Database = {
             columns: ["office_id"]
             isOneToOne: false
             referencedRelation: "offices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_receipts: {
+        Row: {
+          created_at: string
+          entity_id: string
+          kind: string
+          office_id: string
+          operation_id: string
+          request_hash: string
+          revision: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          kind: string
+          office_id: string
+          operation_id: string
+          request_hash: string
+          revision: number
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          kind?: string
+          office_id?: string
+          operation_id?: string
+          request_hash?: string
+          revision?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_receipts_office_id_fkey"
+            columns: ["office_id"]
+            isOneToOne: false
+            referencedRelation: "offices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sync_receipts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -745,7 +1223,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      matter_progress: {
+        Row: {
+          current_stage: string | null
+          matter_id: string | null
+          next_event_at: string | null
+        }
+        Insert: {
+          current_stage?: never
+          matter_id?: string | null
+          next_event_at?: never
+        }
+        Update: {
+          current_stage?: never
+          matter_id?: string | null
+          next_event_at?: never
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_office_member: {
@@ -755,8 +1250,31 @@ export type Database = {
         }
         Returns: string
       }
+      append_procedure: {
+        Args: { p_matter: string; p_name: string; p_stages: Json }
+        Returns: number
+      }
+      finish_session: {
+        Args: { p_appointment: string; p_next_at?: string; p_outcome: string }
+        Returns: string
+      }
       log_login_success: { Args: never; Returns: undefined }
       my_access: { Args: never; Returns: Json }
+      platform_list_office_requests: {
+        Args: never
+        Returns: {
+          admin_name: string
+          admin_phone: string
+          decided_at: string
+          decision: string
+          note: string
+          office_id: string
+          office_name: string
+          office_phone: string
+          requested_at: string
+          status: Database["public"]["Enums"]["office_status"]
+        }[]
+      }
       platform_list_offices: {
         Args: never
         Returns: {
@@ -782,6 +1300,10 @@ export type Database = {
       save_matter: {
         Args: { p_matter: Json; p_parties?: Json }
         Returns: string
+      }
+      save_stage: {
+        Args: { p_next_at?: string; p_stage: Json }
+        Returns: undefined
       }
       svc_actor_info: { Args: { p_actor: string }; Returns: Json }
       svc_add_member: {
@@ -811,6 +1333,10 @@ export type Database = {
         Args: { p_actor: string; p_target: string }
         Returns: boolean
       }
+      svc_consume_office_request_attempt: {
+        Args: { p_source_hash: string }
+        Returns: string
+      }
       svc_create_office: {
         Args: {
           p_actor: string
@@ -834,6 +1360,56 @@ export type Database = {
           p_user: string
         }
         Returns: string
+      }
+      svc_office_request_limit: {
+        Args: { p_source_hash: string }
+        Returns: string
+      }
+      svc_request_office: {
+        Args: {
+          p_admin_name: string
+          p_admin_phone: string
+          p_name: string
+          p_note: string
+          p_phone: string
+          p_source_hash: string
+          p_user: string
+        }
+        Returns: string
+      }
+      svc_review_office_request: {
+        Args: { p_actor: string; p_approve: boolean; p_office: string }
+        Returns: string
+      }
+      sync_assignment: {
+        Args: {
+          p_base_revision: number
+          p_data: Json
+          p_id: string
+          p_office: string
+          p_operation: string
+        }
+        Returns: number
+      }
+      sync_client: {
+        Args: {
+          p_base_revision: number
+          p_data: Json
+          p_id: string
+          p_office: string
+          p_operation: string
+        }
+        Returns: number
+      }
+      sync_matter: {
+        Args: {
+          p_base_revision: number
+          p_data: Json
+          p_id: string
+          p_office: string
+          p_operation: string
+        }
+        Returns: number
       }
     }
     Enums: {
@@ -885,7 +1461,7 @@ export type Database = {
         | "notarization"
         | "consultation"
         | "other"
-      office_status: "active" | "suspended" | "closed"
+      office_status: "active" | "suspended" | "closed" | "pending" | "rejected"
       party_role: "client" | "opponent" | "witness" | "expert" | "other"
       payment_method:
         | "cash"
@@ -905,6 +1481,7 @@ export type Database = {
         | "refund"
         | "other"
       priority_level: "low" | "normal" | "high" | "urgent"
+      stage_status: "pending" | "active" | "completed" | "skipped"
       task_status: "pending" | "in_progress" | "completed" | "cancelled"
     }
     CompositeTypes: {
@@ -1086,7 +1663,7 @@ export const Constants = {
         "consultation",
         "other",
       ],
-      office_status: ["active", "suspended", "closed"],
+      office_status: ["active", "suspended", "closed", "pending", "rejected"],
       party_role: ["client", "opponent", "witness", "expert", "other"],
       payment_method: [
         "cash",
@@ -1108,6 +1685,7 @@ export const Constants = {
         "other",
       ],
       priority_level: ["low", "normal", "high", "urgent"],
+      stage_status: ["pending", "active", "completed", "skipped"],
       task_status: ["pending", "in_progress", "completed", "cancelled"],
     },
   },

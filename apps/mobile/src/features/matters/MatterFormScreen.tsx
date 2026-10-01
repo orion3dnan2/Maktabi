@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -24,16 +24,14 @@ import {
   Input,
   LoadingState,
 } from "@maktabi/ui";
-import { useAuth } from "@/auth/AuthProvider";
-import { canReassignMatters, canUseMatters } from "@/auth/access";
 import {
   clientRepository,
   matterRepository,
   newId,
   OFFICE_ID,
 } from "@/data/repositories";
-import { userMessage } from "@/data/supabase/errors";
-import { serverNotice, useResource, useUnsavedChanges } from "../shared/hooks";
+import { demoNotice, useResource, useUnsavedChanges } from "../shared/hooks";
+const fetchClients = () => clientRepository.listByOffice(OFFICE_ID);
 const stepNames = [
   "المعلومات الأساسية",
   "العملاء والأطراف",
@@ -46,26 +44,13 @@ const roles = {
   CLIENT: "عميل إضافي",
   OPPONENT: "طرف مقابل",
   WITNESS: "شاهد",
+  EXPERT: "خبير",
   OTHER: "طرف آخر",
 };
-const openStatuses = { ACTIVE: matterStatuses.ACTIVE, ON_HOLD: matterStatuses.ON_HOLD };
 export default function MatterFormScreen() {
   const router = useRouter();
-  const { clientId, id } = useLocalSearchParams<{ clientId?: string; id?: string }>();
-  const { access } = useAuth();
-  const allowed = canUseMatters(access);
-  const editing = !!id;
-  const fetchForm = useCallback(async () => {
-    if (!allowed) return null;
-    const [clients, existing, lawyers] = await Promise.all([
-      clientRepository.listByOffice(OFFICE_ID),
-      id ? matterRepository.getById(id) : Promise.resolve(null),
-      matterRepository.listAssignableLawyers(),
-    ]);
-    if (id && !existing) throw new Error("القضية غير موجودة أو لا تملك صلاحية الوصول إليها");
-    return { clients, existing, lawyers };
-  }, [id, allowed]);
-  const resource = useResource(fetchForm);
+  const { clientId } = useLocalSearchParams<{ clientId?: string }>();
+  const resource = useResource(fetchClients);
   const [matter, setMatter] = useState<Matter>(() => ({
     id: newId(),
     officeId: OFFICE_ID,
@@ -92,35 +77,27 @@ export default function MatterFormScreen() {
   const { cancel, confirmation } = useUnsavedChanges(
     !saved && (dirty || !!partyName.trim()),
   );
-  // Initialise once, while rendering, when the form data first loads: the saved matter, or a preselected client.
-  if (resource.data && !initialized) {
-    const c = resource.data.clients.find((c) => c.id === clientId);
-    if (resource.data.existing) setMatter(resource.data.existing);
-    else
-      setMatter((m) => ({
-        ...m,
-        // Decided here, once the signed-in role is known: a lawyer's new matter is always
-        // assigned to themselves (the database enforces this) and an admin starts with themselves.
-        assignedLawyerId: access?.role === "lawyer" || access?.role === "admin" ? access.user_id : undefined,
-        parties: c
-          ? [
-              {
-                id: newId(),
-                matterId: m.id,
-                clientId: c.id,
-                displayName: c.displayName,
-                role: "CLIENT",
-                isPrimary: true,
-              },
-            ]
-          : m.parties,
-      }));
-    setInitialized(true);
-  }
+    if (resource.data && !initialized) {
+      const c = resource.data.find((c) => c.id === clientId);
+      if (c)
+        setMatter((m) => ({
+          ...m,
+          parties: [
+            {
+              id: newId(),
+              matterId: m.id,
+              clientId: c.id,
+              displayName: c.displayName,
+              role: "CLIENT",
+              isPrimary: true,
+            },
+          ],
+        }));
+      setInitialized(true);
+    }
   useEffect(() => {
-    if (saved && editing) router.replace({ pathname: '/matters/[id]', params: { id: matter.id } });
-    else if (saved) router.replace({ pathname: '/matters/[id]/workflow', params: { id: matter.id } });
-  }, [saved, editing, router, matter.id]);
+    if (saved) router.replace({ pathname: '/matters/[id]/workflow', params: { id: matter.id } });
+  }, [saved, router, matter.id]);
   const update = (patch: Partial<Matter>) => {
     setMatter((m) => ({ ...m, ...patch }));
     setDirty(true);
@@ -128,7 +105,7 @@ export default function MatterFormScreen() {
   };
   const primary = matter.parties.find((p) => p.isPrimary)?.clientId ?? "";
   const setPrimary = (id: string) => {
-    const client = resource.data?.clients.find((c) => c.id === id);
+    const client = resource.data?.find((c) => c.id === id);
     if (client)
       update({
         parties: [
@@ -179,36 +156,23 @@ export default function MatterFormScreen() {
       });
       setSaved(true);
     } catch (e) {
-      setSaveError(userMessage(e, editing ? "تعذر حفظ التعديلات" : "تعذر إنشاء الملف"));
+      setSaveError(e instanceof Error ? e.message : "تعذر إنشاء الملف");
     } finally {
       setSaving(false);
     }
   };
-  const pageTitle = editing ? "تعديل القضية" : "ملف جديد";
-  if (!allowed)
-    return (
-      <FormPage title={pageTitle}>
-        <BodyText>لا تملك صلاحية إنشاء القضايا أو تعديلها. تواصل مع مدير المكتب.</BodyText>
-        <Button label="رجوع" onPress={cancel} />
-      </FormPage>
-    );
   if (resource.error)
     return (
-      <FormPage title={pageTitle}>
+      <FormPage title="ملف جديد">
         {confirmation}
         <ErrorState message={resource.error} onRetry={resource.reload} />
         <Button label="إلغاء" onPress={cancel} />
       </FormPage>
     );
   if (!resource.data || !initialized) return <LoadingState />;
-  const { clients, lawyers, existing } = resource.data;
-  // Only an admin may reassign a saved matter; a lawyer's new matter stays assigned to themselves.
-  const canPickLawyer = editing ? canReassignMatters(access) : access?.role !== "lawyer";
-  const lawyerName = lawyers.find((l) => l.id === matter.assignedLawyerId)?.fullName ?? matter.assignedLawyerName;
-  const statusOptions = !editing ? matterStatuses : existing && (existing.status === "ACTIVE" || existing.status === "ON_HOLD") ? openStatuses : undefined;
-  if (!clients.length)
+  if (!resource.data.length)
     return (
-      <FormPage title={pageTitle}>
+      <FormPage title="ملف جديد">
         <BodyText>أضف عميلاً قبل إنشاء الملف.</BodyText>
         <Button
           label="عميل جديد"
@@ -218,9 +182,9 @@ export default function MatterFormScreen() {
       </FormPage>
     );
   return (
-    <FormPage title={pageTitle}>
+    <FormPage title="ملف جديد">
       {confirmation}
-      <BodyText muted>{serverNotice}</BodyText>
+      <BodyText muted>{demoNotice}</BodyText>
       <Text accessibilityRole="header" style={s.title}>
         {step + 1} / 6 · {stepNames[step]}
       </Text>
@@ -239,38 +203,12 @@ export default function MatterFormScreen() {
             onChangeText={(v) => update({ title: v })}
             error={errors.title}
           />
-          {statusOptions ? (
-            <ChoiceField
-              label="الحالة"
-              value={matter.status}
-              options={choices(statusOptions)}
-              onChange={(v) => update({ status: v as MatterStatus })}
-            />
-          ) : (
-            <BodyText>الحالة: {matterStatuses[matter.status]}</BodyText>
-          )}
-          {editing && statusOptions ? (
-            <BodyText muted>إغلاق القضية يتم من مسار القضية بعد إنهاء مواعيدها ومراحلها.</BodyText>
-          ) : null}
-          {canPickLawyer ? (
-            <ChoiceField
-              label="المحامي المسؤول"
-              value={matter.assignedLawyerId ?? ""}
-              searchable
-              options={[
-                { value: "", label: "غير مُسند" },
-                ...lawyers.map((l) => ({ value: l.id, label: l.fullName })),
-              ]}
-              onChange={(v) =>
-                update({
-                  assignedLawyerId: v || undefined,
-                  assignedLawyerName: lawyers.find((l) => l.id === v)?.fullName,
-                })
-              }
-            />
-          ) : (
-            <BodyText>المحامي المسؤول: {lawyerName ?? "غير مُسند"}</BodyText>
-          )}
+          <ChoiceField
+            label="الحالة"
+            value={matter.status}
+            options={choices(matterStatuses)}
+            onChange={(v) => update({ status: v as MatterStatus })}
+          />
         </>
       ) : null}
       {step === 1 ? (
@@ -279,7 +217,7 @@ export default function MatterFormScreen() {
             label="العميل الأساسي *"
             value={primary}
             searchable
-            options={clients.map((c) => ({
+            options={resource.data.map((c) => ({
               value: c.id,
               label: c.displayName,
             }))}
@@ -292,7 +230,7 @@ export default function MatterFormScreen() {
               label="اختر عميلاً مسجلاً"
               value={additionalClient}
               searchable
-              options={clients
+              options={resource.data
                 .filter((c) => !matter.parties.some((p) => p.clientId === c.id))
                 .map((c) => ({ value: c.id, label: c.displayName }))}
               onChange={setAdditionalClient}
@@ -304,7 +242,7 @@ export default function MatterFormScreen() {
                 matter.parties.some((p) => p.clientId === additionalClient)
               }
               onPress={() => {
-                const c = clients.find((c) => c.id === additionalClient);
+                const c = resource.data!.find((c) => c.id === additionalClient);
                 if (c)
                   update({
                     parties: [
@@ -445,7 +383,6 @@ export default function MatterFormScreen() {
             </BodyText>
             <BodyText>الجهة: {matter.authority}</BodyText>
             <BodyText>تاريخ الفتح: {matter.openedAt}</BodyText>
-            <BodyText>المحامي المسؤول: {lawyerName ?? "غير مُسند"}</BodyText>
             <BodyText>الملاحظات: {matter.notes || "لا توجد"}</BodyText>
           </Card>
           <Card>
@@ -471,11 +408,9 @@ export default function MatterFormScreen() {
               {value}
             </Text>
           ))}
-          {!editing ? (
-            <BodyText muted>
-              بعد الإنشاء ستنتقل إلى المواعيد والمستندات والأتعاب ومتابعة القضية.
-            </BodyText>
-          ) : null}
+          <BodyText muted>
+            بعد الإنشاء ستنتقل إلى المواعيد والمستندات والأتعاب ومتابعة القضية.
+          </BodyText>
         </>
       ) : null}
       {saveError ? (
@@ -486,7 +421,7 @@ export default function MatterFormScreen() {
       <View style={s.gap}>
         {step === 5 ? (
           <Button
-            label={saving ? "جارٍ الحفظ…" : editing ? "حفظ التعديلات" : "إنشاء الملف"}
+            label={saving ? "جارٍ الإنشاء…" : "إنشاء الملف"}
             disabled={saving}
             onPress={() => void create()}
           />

@@ -1,7 +1,7 @@
 import { createElement, useEffect, useState } from "react";
 import { useNavigation, useRouter } from "expo-router";
 import { DiscardChangesDialog } from "@maktabi/ui";
-import { userMessage } from "@/data/supabase/errors";
+import { sharedEngine } from '@/data/sharedRepositories';
 import {
   useIsFocused,
   usePreventRemove,
@@ -13,24 +13,25 @@ export function useResource<T>(fetcher: () => Promise<T>) {
   const [loading, setLoading] = useState(true);
   const [revision, setRevision] = useState(0);
   const isFocused = useIsFocused();
-  // Reset while rendering, not in the effect, whenever the effect below is about to fetch again.
-  const [requested, setRequested] = useState({ fetcher, revision, isFocused });
-  if (requested.fetcher !== fetcher || requested.revision !== revision || requested.isFocused !== isFocused) {
-    setRequested({ fetcher, revision, isFocused });
-    if (isFocused) {
-      setLoading(true);
-      setError("");
-    }
-  }
+  useEffect(() => {
+    if (!isFocused) return;
+    try { return sharedEngine().subscribe(() => setRevision(r => r + 1)); }
+    catch { return; } // Authentication/platform screens have no office sync engine.
+  }, [isFocused]);
   useEffect(() => {
     if (!isFocused) return;
     let active = true;
-    fetcher()
+    Promise.resolve().then(() => {
+      if (!active) return undefined;
+      setLoading(true);
+      setError("");
+      return fetcher();
+    })
       .then((result) => {
-        if (active) setData(result);
+        if (active && result !== undefined) setData(result);
       })
       .catch((e: unknown) => {
-        if (active) setError(userMessage(e, "تعذر قراءة البيانات. حاول مرة أخرى."));
+        if (active) setError(e instanceof Error ? e.message : "تعذر قراءة البيانات. حاول مرة أخرى.");
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -62,9 +63,6 @@ export function useUnsavedChanges(dirty: boolean) {
 }
 export const money = (minor: number) =>
   `${new Intl.NumberFormat("ar-SD").format(minor / 100)} ج.س`;
-/** Clients and matters are stored on the office server; what each person sees follows their role. */
-export const serverNotice =
-  "تُحفظ بيانات العملاء والقضايا في خادم المكتب وتظهر لزملائك حسب صلاحياتهم.";
-/** Workflow items (appointments, documents, fees, receipts, stages, notes) are still device-only. */
-export const deviceNotice =
-  "المواعيد والمستندات والأتعاب والإيصالات محفوظة مشفرة على هذا الجهاز فقط ولا تتم مزامنتها بعد.";
+export const demoNotice =
+  "العملاء والقضايا تُحفظ محلياً وتُزامن؛ المواعيد والإجراءات تحتاج اتصالاً؛ المالية والمرفقات على هذا الجهاز فقط.";
+

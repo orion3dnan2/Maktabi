@@ -9,6 +9,10 @@ export const clientStatuses: Record<ClientStatus, string> = {
 export const matterTypes: Record<MatterType, string> = {
   CRIMINAL: "جنائية",
   CIVIL: "مدنية",
+  COMMERCIAL: "تجارية",
+  ADMINISTRATIVE: "إدارية",
+  REAL_ESTATE: "عقارية",
+  CONSULTATION: "استشارة",
   PERSONAL_STATUS: "شرعية / أحوال شخصية",
   LABOUR: "عمل",
   SPECIAL_COURT: "محكمة خاصة",
@@ -44,6 +48,10 @@ export const typeFields: Record<MatterType, Record<string, string>> = {
   },
   LAND_REGISTRY: { plot: "رقم القطعة", block: "المربع", location: "الموقع" },
   CIVIL: {},
+  COMMERCIAL: {},
+  ADMINISTRATIVE: {},
+  REAL_ESTATE: {},
+  CONSULTATION: {},
   NOTARIZATION: {},
   OTHER: {},
 };

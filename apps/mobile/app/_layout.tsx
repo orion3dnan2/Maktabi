@@ -6,6 +6,7 @@ import { useFonts, Tajawal_400Regular, Tajawal_500Medium, Tajawal_700Bold, Tajaw
 import { colors } from '@maktabi/ui';
 import { AuthProvider, useAuth } from '@/auth/AuthProvider';
 import { canOpen, homeFor } from '@/auth/access';
+import { SyncStatus } from '@/features/shared/SyncStatus';
 I18nManager.allowRTL(true);
 I18nManager.forceRTL(true);
 
@@ -18,7 +19,7 @@ function RouteGuard() {
     if (status === 'signedOut' || !access) { if (!inAuth) router.replace('/login'); return; }
     if (!canOpen(access, segments)) router.replace(homeFor(access));
   }, [status, access, segments, router]);
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.canvas }, animation: 'fade' }}/>;
+  return <View style={{ flex: 1 }}><SyncStatus/><Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.canvas }, animation: 'fade' }}/></View>;
 }
 
 export default function RootLayout() {
