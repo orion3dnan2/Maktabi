@@ -2,6 +2,8 @@
 // the server enforces the same rules with RLS and the manage-users function.
 
 export type OfficeRole = 'admin' | 'lawyer' | 'employee' | 'reception' | 'client';
+/** pending / rejected: a trial office requested from the sign-in screen, before or after the platform owner's decision. */
+export type OfficeStatus = 'active' | 'suspended' | 'closed' | 'pending' | 'rejected';
 export interface Access {
   user_id: string;
   full_name: string;
@@ -9,7 +11,7 @@ export interface Access {
   role: OfficeRole | null;
   is_active: boolean;
   client_id: string | null;
-  office: { id: string; name: string; status: 'active' | 'suspended' | 'closed' } | null;
+  office: { id: string; name: string; status: OfficeStatus } | null;
   platform_admin: boolean;
 }
 
@@ -31,6 +33,8 @@ export function accessProblem(a: Access | null | undefined): string | null {
   if (!a) return 'تعذر قراءة بيانات الحساب';
   if (a.platform_admin && !a.office) return null;
   if (!a.office || !a.role) return 'هذا الحساب غير مرتبط بأي مكتب بعد. تواصل مع مدير مكتبك.';
+  if (a.office.status === 'pending') return 'طلب مكتبك قيد المراجعة لدى إدارة المنصة. ستتمكن من الدخول بعد الموافقة عليه.';
+  if (a.office.status === 'rejected') return 'لم تتم الموافقة على طلب مكتبك. تواصل مع إدارة المنصة.';
   if (!a.is_active) return 'تم إيقاف هذا الحساب. تواصل مع مدير مكتبك.';
   if (a.office.status !== 'active') return 'اشتراك المكتب موقوف حالياً. تواصل مع إدارة المنصة.';
   return null;

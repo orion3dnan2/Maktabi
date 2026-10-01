@@ -757,6 +757,21 @@ export type Database = {
       }
       log_login_success: { Args: never; Returns: undefined }
       my_access: { Args: never; Returns: Json }
+      platform_list_office_requests: {
+        Args: never
+        Returns: {
+          admin_name: string
+          admin_phone: string
+          decided_at: string
+          decision: string
+          note: string
+          office_id: string
+          office_name: string
+          office_phone: string
+          requested_at: string
+          status: Database["public"]["Enums"]["office_status"]
+        }[]
+      }
       platform_list_offices: {
         Args: never
         Returns: {
@@ -770,6 +785,10 @@ export type Database = {
           phone: string
           status: Database["public"]["Enums"]["office_status"]
         }[]
+      }
+      platform_review_office_request: {
+        Args: { p_approve: boolean; p_office: string }
+        Returns: undefined
       }
       platform_set_office_status: {
         Args: {
@@ -835,6 +854,22 @@ export type Database = {
         }
         Returns: string
       }
+      svc_office_request_limit: {
+        Args: { p_source_hash: string }
+        Returns: string
+      }
+      svc_request_office: {
+        Args: {
+          p_admin_name: string
+          p_admin_phone: string
+          p_name: string
+          p_note: string
+          p_phone: string
+          p_source_hash: string
+          p_user: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "admin" | "lawyer" | "employee" | "reception" | "client"
@@ -885,7 +920,7 @@ export type Database = {
         | "notarization"
         | "consultation"
         | "other"
-      office_status: "active" | "suspended" | "closed"
+      office_status: "active" | "suspended" | "closed" | "pending" | "rejected"
       party_role: "client" | "opponent" | "witness" | "expert" | "other"
       payment_method:
         | "cash"
@@ -1086,7 +1121,7 @@ export const Constants = {
         "consultation",
         "other",
       ],
-      office_status: ["active", "suspended", "closed"],
+      office_status: ["active", "suspended", "closed", "pending", "rejected"],
       party_role: ["client", "opponent", "witness", "expert", "other"],
       payment_method: [
         "cash",

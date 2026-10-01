@@ -25,6 +25,11 @@ The authoritative applied migration history is:
 12. `20260929093954_sudan_only_defaults` — the app is Sudan-only (product decision 2026-09-29): office/payment defaults `SD`/`SDG`/`Africa/Khartoum`, payment amounts with two decimals, office numbering year in Khartoum time, the Kuwait civil-ID rule dropped, `clients_national_id_digits` (the Sudanese national number is digits only), `payment_method` value `knet` renamed to `bankak`, `private.bootstrap_office` defaults `SD`/`SDG`.
 13. `20260929100948_sudanese_phone_numbers` — every stored phone number (clients phone/secondary/whatsapp, offices, profiles) must be Sudanese E.164: `^\+249[1-9][0-9]{8}$`.
 
+**Not yet applied to the live project** (branch `claude/youthful-babbage-5kkk9r`, trial office requests). When applying through MCP `apply_migration`, Supabase records its own version timestamp: rename the files to the recorded versions afterwards so the repository keeps matching `schema_migrations`. Deploy `manage-users` (with `verify_jwt = false`, as before) in the same step, then run `supabase/tests/office_requests.sql`.
+
+14. `20261001100000_office_request_statuses` — `office_status` gains `pending` and `rejected` (own migration: a new enum value cannot be used in the transaction that adds it).
+15. `20261001100100_trial_office_requests` — `private.office_requests`; `svc_office_request_limit` / `svc_request_office` (service_role only); `platform_list_office_requests` / `platform_review_office_request`; `platform_list_offices` hides undecided and rejected requests; `platform_set_office_status` refuses to change a request's status.
+
 Do not create replacement migration versions for these entries. New database changes must use new later migration versions only.
 
 ## What Phase 2 changed in the app
@@ -67,5 +72,5 @@ Do not replace this control with a frontend-only restriction.
 - Screens never call Supabase directly for clients and matters; use `src/data/repositories.ts`.
 - Do not hard-delete legal or business records; archive by status.
 - Do not modify Sudan-specific defaults (currency, timezone, identity, payment methods) without explicit product approval.
-- Run `supabase/tests/phase1_access.sql` and `supabase/tests/phase2_clients_matters.sql` after any change to permissions, clients, matters or parties, and `supabase/tests/sudan_only.sql` after any change to defaults, identity, phone numbers or payments.
+- Run `supabase/tests/phase1_access.sql` and `supabase/tests/phase2_clients_matters.sql` after any change to permissions, clients, matters or parties, `supabase/tests/sudan_only.sql` after any change to defaults, identity, phone numbers or payments, and `supabase/tests/office_requests.sql` after any change to office requests, office statuses or the platform owner functions.
 - Update README and this handoff whenever architecture or migration state changes.

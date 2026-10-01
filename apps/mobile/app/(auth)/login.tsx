@@ -51,6 +51,7 @@ export default function LoginScreen() {
     <GoldButton label={busy ? 'جارٍ الدخول…' : 'دخول'} onPress={() => void submit()}/>
     {localDataLocked ? <Pressable accessibilityRole="button" onPress={confirmDiscard} style={authStyles.secondary}><Text style={authStyles.secondaryText}>بدء بيانات جديدة على هذا الجهاز</Text></Pressable> : null}
     <Text style={authStyles.note}>نسيت كلمة المرور؟ اطلب من مدير مكتبك تعيين كلمة مرور جديدة لك.</Text>
+    <Pressable accessibilityRole="link" onPress={() => router.push('/request-office')} hitSlop={8}><Text style={authStyles.link}>ليس لديك حساب؟ اطلب مكتباً تجريبياً</Text></Pressable>
     <Pressable accessibilityRole="link" onPress={() => router.push('/owner-setup')} hitSlop={8}><Text style={authStyles.link}>إعداد حساب مالك المنصة (برمز إعداد)</Text></Pressable>
     <View style={[authStyles.secure, { flexDirection: row }]}><Ionicons name="lock-closed" size={16} color={colors.muted}/><Text style={authStyles.note}>اتصال مشفّر · كل مكتب يرى بياناته فقط</Text></View>
   </AuthLayout>;
